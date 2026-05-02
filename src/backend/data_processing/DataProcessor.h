@@ -5,7 +5,8 @@
 #include <QString>
 #include <QVector>
 #include <QHash>
-#include "DataTypes.h" // SensorFrame, Decision, WarningEvent, AlarmEvent, ActuatorCommand, Config
+#include "DataTypes.h"  //Допишем
+// SensorFrame, Decision, WarningEvent, AlarmEvent, ActuatorCommand, Config
 
 /**
  * ver_1_черновик

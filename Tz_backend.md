@@ -28,31 +28,7 @@
 
 Живёт в рабочем потоке. Владеет экземплярами всех остальных модулей, соединяет их сигналы и слоты.
 
-**Слоты (команды от фронтенда):**
 
-| Слот | Описание |
-|------|----------|
-| `void onStart(Config config)` | Запуск нового испытания. |
-| `void onStop()` | Экстренная остановка. |
-| `void onNextStage()` | Принудительный переход к следующему этапу. |
-| `void onGetStatus()` | Запрос текущего состояния. |
-| `void onGetReport(quint64 runId)` | Запрос отчёта по завершённому испытанию. |
-| `void onGetHistory()` | Запрос списка завершённых испытаний. |
-
-*(Большинство названий слотов предложено автором, кроме `onStop` и `onNextStage`, заложенных в ТЗ управления процессом.)*
-
-**Сигналы (данные и события для фронтенда):**
-
-| Сигнал | Описание |
-|--------|----------|
-| `void statusUpdated(QString state, SensorFrame lastData)` | Периодическая отправка состояния (не реже 1 раза в сек). |
-| `void liveData(SensorFrame frame)` | Каждое новое измерение. |
-| `void alarmEvent(AlarmEvent event)` | Немедленное аварийное уведомление. |
-| `void warningEvent(WarningEvent event)` | Предупреждение. |
-| `void processFinished(Report report)` | Завершение испытания, передача отчёта. |
-| `void historyReady(QVector<quint64> runIds)` | Ответ на запрос истории. |
-
-*(`statusUpdated`, `liveData`, `alarmEvent`, `warningEvent` — из исходных требований «передача нештатных сообщений»; `processFinished`, `historyReady` — предложено автором.)*
 
 ### 3.2. Модуль управления процессом (StateMachine)
 
