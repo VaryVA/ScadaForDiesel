@@ -58,18 +58,30 @@
 - `void alarmRaised(AlarmEvent event)` *(из ТЗ обработки данных)*.
 - `void controlNeeded(ActuatorCommand correction)` *(предложено автором)* – если требуется корректирующее воздействие.
 
-### 3.4. Модуль связи с моделью (ModbusDataBridge)
+### 3.4. Модуль связи с моделью (IModbusDataBridge)
 
-Реализует опрос Modbus TCP и запись команд. Владеет `QModbusTcpClient`.
+Интерфейс реализует запросы к Modbus Server на чтение/запись данных. Интерфейс написан на Qt6.11.
 
 **Слоты:**
 - `void onStartPolling()` – запуск таймера опроса.
 - `void onStopPolling()` – остановка таймера.
+- `void onReadSensors()` - обработка прямого запросо на чтение данных всех датчиков.
+- `void onReadInfo()` - обработка прямого запроса на чтение настроек МК и состояний датчиков.
 - `void onWriteCommand(ActuatorCommand cmd)` – запись управляющих регистров в модель *(из ТЗ ModelClient)*.
 
 **Сигналы:**
-- `void dataReady(SensorFrame frame)` – после успешного чтения регистров *(из ТЗ ModelClient)*.
-- `void errorOccurred(QString errorMessage)` – при критическом сбое связи *(из ТЗ ModelClient)*.
+- `void modelInfoReady(const ModelInfo& data)` – после успешного чтения информации модели.
+- `void sensorsDataReady(const SensorFrame& data)` – после успешного чтения регистров датчиков *(из ТЗ ModelClient)*.
+- `void configurationError(QModbusDevice::Error type, const QString& reason)` – сигнал ошибки.
+- `void connectionError(QModbusDevice::Error type, const QString& reason)` – сигнал ошибки.
+- `void requestError(QModbusDevice::Error type, const QString& reason)` – сигнал ошибки.
+- `void generalError(QModbusDevice::Error type, const QString& reason)` – сигнал ошибки.
+- `void connectionLost()` – потеря соединения.
+- `void connectionRestored()` – соединение восстановлено.
+
+**Конфиг (IModbusConfigBuilder):**
+- Выдаёт готовый конфиг через `std::optional<ModbusConfig> get() const`.
+- Валидирует конфиг, при ошибках `get()` выдаст пустое значение.
 
 ### 3.5. Модуль хранения данных (DataStore)
 
@@ -92,13 +104,57 @@
 
 Все структуры имеют открытые поля и зарегистрированы как метатипы Qt.
 
+### ModbusConfig (схемы регистров могут быть другими)
+```cpp
+// Control registers mapping, read/write, 1-bit
+struct CoilsRegistersScheme
+{
+    bool motorEnabled;
+};
+
+// Device status registers mapping, only read, 1-bit
+struct DiscreteRegistersScheme
+{
+    bool fanAd;
+    bool fanBall;
+};
+
+// Settings and variables registers mapping, read/write, 16-bit
+struct HoldingRegistersScheme
+{
+    double targetRpm;
+    double throttlePosition;
+    double brakeTorque;
+};
+
+// Sensor data registers mapping, only read, 16-bit
+struct InputRegistersScheme
+{
+    double rpm, torque;
+    double dieselTemp, motorTemp, resistorTemp, dieselPressure;
+    double throttle, brakeTorque;
+};
+
+struct ModbusConfig
+{
+    QString host;
+    quint16 port = 1502;
+    int pollFrequencyMs = 1000;
+    int timeoutMs = 1000;
+    int retries = 3;
+    int unitId = 1;  // we assume one modbus device, so unitId will be ignored
+    // Start address is 0 for each register type
+    CoilsRegistersScheme coils;
+    DiscreteRegistersScheme discrete;
+    InputRegistersScheme input;
+    HoldingRegistersScheme holding;
+};
+```
+
+
 ### Config (предложено автором)
 ```cpp
 struct Config {
-    QString modbusHost = "127.0.0.1";
-    int modbusPort = 502;
-    int pollIntervalMs = 1000;
-
     QVector<int> stageDurationSec;
     double targetRpmCold;
     double throttleWarmup;
@@ -124,13 +180,23 @@ struct SensorFrame {
 };
 ```
 
-### ActuatorCommand (из ТЗ ModelClient)
+### ModelConfig (из ТЗ ModelClient)
 ```cpp
-struct ActuatorCommand {
+struct ModelConfig
+{
     bool motorEnabled;
     double targetRpm;
     double throttlePosition;
     double brakeTorque;
+};
+```
+
+### ModelInfo (из ТЗ ModelClient)
+```cpp
+struct ModelInfo {
+    bool fanAd;
+    bool fanBall;
+    ModelConfig cfg;
 };
 ```
 
