@@ -27,3 +27,13 @@ struct SensorFrame
     double dieselTemp, motorTemp, resistorTemp, dieselPressure;
     double throttle, brakeTorque;
 };
+//stages of experiment
+enum DiagState{
+    IDLE = 0,
+    COLD_CRANKING, 
+    START_AND_WARMUP, 
+    HOT_NO_LOAD, 
+    HOT_WITH_LOAD, 
+    COMPLETED, 
+    ABORTED
+};
