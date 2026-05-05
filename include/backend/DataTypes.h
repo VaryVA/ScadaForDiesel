@@ -31,9 +31,12 @@ struct InputRegistersScheme
     double throttle, brakeTorque;
 };
 
+//Структра для задания конфигурации Modbus-клиента
 struct ModbusConfig
 {
+    //Ip-адрес Modbus-сервера
     QString host;
+    //Порт Modbus-сервера
     quint16 port = 1502;
     int pollFrequencyMs = 1000;
     int timeoutMs = 1000;
@@ -46,39 +49,100 @@ struct ModbusConfig
     HoldingRegistersScheme holding;
 };
 
-// Settings of model (for writing/reading operations)
-struct ModelConfig
+//Этапы эксперимента
+enum DiagState
 {
-    bool motorEnabled;
-    double targetRpm;
-    double throttlePosition;
-    double brakeTorque;
-};
-
-// States of model (for only reading operations)
-struct ModelInfo {
-    bool fanAd;
-    bool fanBall;
-    ModelConfig cfg;
-};
-
-// Data of sensors
-struct SensorFrame
-{
-    qint64 runId;
-    int stage;
-    qint64 timestampMs;
-    double rpm, torque;
-    double dieselTemp, motorTemp, resistorTemp, dieselPressure;
-    double throttle, brakeTorque;
-};
-//stages of experiment
-enum DiagState{
     IDLE = 0,
-    COLD_CRANKING, 
-    START_AND_WARMUP, 
-    HOT_NO_LOAD, 
-    HOT_WITH_LOAD, 
-    COMPLETED, 
+    COLD_CRANKING,
+    START_AND_WARMUP,
+    HOT_NO_LOAD,
+    HOT_WITH_LOAD,
+    COMPLETED,
     ABORTED
 };
+
+//Структра для управления моделью фронтом
+struct FrontControl
+{
+    //Этап эксперимента
+    DiagState state;
+    //Максимальная частота в зависимости от этапа(необязательный параметр на некоторых этапах - может быть не задан)
+    int maxFreq;
+    //Время выполнения этапа в минутах(необязательный параметр на некоторых этапах - может быть не задан)
+    unsigned int time;
+};
+
+//Структра для задания максимальных значений модели
+struct ModelConfig
+{
+    //Максимальная температура ДВС
+    double maxDieselTemp;
+    //Максимальная температура АД
+    double maxAdTemp;
+    //Максимальная температура балластных резисторов
+    double maxResistorTemp;
+    //Максимальное давление в ДВС
+    double maxDieselPressure;
+    //Минимальное давление в ДВС
+    double minDieselPressure;
+};
+
+//Параметры модели, которые могут быть изменены в ходе эксперимента
+enum DecisionType
+{
+    //Максимальная частота в режиме притирки
+    MAX_FREQ_LAP,
+    //Максимальная частота в режиме обкатки
+    MAX_FREQ_HOT,
+    //Состояние вентилятора ассинхронного двигателя
+    FAN_AD,
+    //Состояние вентилятора на балластных резисторах
+    FAN_RESISTOR
+};
+
+//Управляющее воздействие
+struct ModelControl
+{
+    //Тип изменяемого параметра
+    DecisionType decisionType;
+    //Значение (Для FAN_AD и FAN_RESISTOR - значение 0(false), значение 1(true))
+    int value;
+};
+
+struct Decision
+{
+    //Вектор управляющих воздействий
+    QVector<ModelControl> controls;
+    //Этап эксперимента
+    DiagState state;
+};
+
+//Снимок датчиков
+struct SensorFrame
+{
+    //Метка времени в UNIX-формате
+    qint64 timestampSec;
+    //Температура ДВС
+    double dieselTemp;
+    //Температура АД
+    double adTemp;
+    //Температура балластных резисторов
+    double resistorTemp;
+    //Давление
+    double dieselPressure;
+    //Момент
+    double moment;
+    //Частота
+    double freq;
+};
+
+//Структра для DataStore
+struct Data
+{
+    //Снимок датчиков
+    SensorFrame frame;
+    //Этап эксперимента
+    DiagState state;
+};
+
+
