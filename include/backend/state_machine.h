@@ -4,13 +4,20 @@
 #include <QObject>
 #include <QTimer>
 #include "DataTypes.h"
-
+#include "backend_worker/backendworker.h"
+#include "backend_worker/backendcommunicator.h"
+#include "config_data.h"
+#include "modbus_client/QtModbusBridge.h"
 
 class StateMachine : public QObject
 {
     Q_OBJECT
 public:
-    explicit StateMachine(ModelConfig& config);
+    explicit StateMachine(BackendWorker* backendWorker, QObject *parent = nullptr);
+
+    void Run();
+    void Stop();
+
     void requestStart(const ModelConfig &config);
     void requestNextStage();
     void requestAbort(const QString &reason = QString());
@@ -25,8 +32,16 @@ signals:
 private slots:
     void onStageTimeout();
 
+    //Слот для обработки пришедшего запроса на изменения этапа эксперимента от фронта
+    void onReceivedFrontControl(FrontControl control);
+    //Слот для обработки пришедшего кофига от фронта
+    void onReceivedModelConfig(ModelConfig config);
+
 private:
     void transitionTo(DiagState newState);
+
+    BackendCommunicator* m_communicator;
+    QtModbusBridge* m_modbusBridge;
 
     DiagState m_state = DiagState::IDLE;
     ModelConfig m_config;

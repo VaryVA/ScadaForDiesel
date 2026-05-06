@@ -1,6 +1,7 @@
 #pragma once
 #include <QtGlobal>
 #include <QString>
+#include <QVector>
 
 // Control registers mapping, read/write, 1-bit
 struct CoilsRegistersScheme
