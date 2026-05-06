@@ -1,168 +1,75 @@
-#pragma once
-#include <QtGlobal>
+// DataTypes.h (фрагмент, относящийся к DataProcessor)
+
+#ifndef DATATYPES_H
+#define DATATYPES_H
 #include <QString>
 #include <QVector>
-
-// Control registers mapping, read/write, 1-bit
-struct CoilsRegistersScheme
-{
-    bool fanAd;
-    bool fanBall;
-};
-
-// Device status registers mapping, only read, 1-bit
-struct DiscreteRegistersScheme
-{
-    bool fanAd;
-    bool fanBall;
-};
-
-// Settings and variables registers mapping, read/write, 16-bit
-struct HoldingRegistersScheme
-{
-    //Максимальная температура ДВС
-    double maxDieselTemp;
-    //Максимальная температура АД
-    double maxAdTemp;
-    //Максимальная температура балластных резисторов
-    double maxResistorTemp;
-    //Максимальное давление в ДВС
-    double maxDieselPressure;
-    //Минимальное давление в ДВС
-    double minDieselPressure;
-    //Максимальная частота в режиме притирки
-    int maxFreqLap;
-    //Максимальная частота в режиме обкатки
-    int maxFreqHot;
-};
-
-// Sensor data registers mapping, only read, 16-bit
-struct InputRegistersScheme
-{
-    //Температура ДВС
-    double dieselTemp;
-    //Температура АД
-    double adTemp;
-    //Температура балластных резисторов
-    double resistorTemp;
-    //Давление
-    double dieselPressure;
-    //Момент
-    double moment;
-    //Частота
-    double freq;
-};
-
-//Структра для задания конфигурации Modbus-клиента
-struct ModbusConfig
-{
-    //Ip-адрес Modbus-сервера
-    QString host;
-    //Порт Modbus-сервера
-    quint16 port = 1502;
-    int pollFrequencyMs = 1000;
-    int timeoutMs = 1000;
-    int retries = 3;
-    int unitId = 1;  // we assume one modbus device, so unitId will be ignored
-    // Start address is 0 for each register type, registers ordered sequentially
-    CoilsRegistersScheme coils;
-    DiscreteRegistersScheme discrete;
-    InputRegistersScheme input;
-    HoldingRegistersScheme holding;
-};
-
-//Этапы эксперимента
-enum DiagState
-{
-    IDLE = 0,
-    COLD_CRANKING,
-    START_AND_WARMUP,
-    HOT_NO_LOAD,
-    HOT_WITH_LOAD,
-    COMPLETED,
-    ABORTED
-};
-
-//Структра для управления моделью фронтом
-struct FrontControl
-{
-    //Этап эксперимента
-    DiagState state;
-    //Максимальная частота в зависимости от этапа(необязательный параметр на некоторых этапах - может быть не задан)
-    int maxFreq;
-    //Время выполнения этапа в минутах(необязательный параметр на некоторых этапах - может быть не задан)
-    unsigned int time;
-};
-
-//Структра для задания максимальных значений модели
-struct ModelConfig
-{
-    //Максимальная температура ДВС
-    double maxDieselTemp;
-    //Максимальная температура АД
-    double maxAdTemp;
-    //Максимальная температура балластных резисторов
-    double maxResistorTemp;
-    //Максимальное давление в ДВС
-    double maxDieselPressure;
-    //Минимальное давление в ДВС
-    double minDieselPressure;
-};
-
-//Параметры модели, которые могут быть изменены в ходе эксперимента
-enum DecisionType
-{
-    //Максимальная частота в режиме притирки
-    MAX_FREQ_LAP,
-    //Максимальная частота в режиме обкатки
-    MAX_FREQ_HOT,
-    //Состояние вентилятора ассинхронного двигателя
-    FAN_AD,
-    //Состояние вентилятора на балластных резисторах
-    FAN_RESISTOR
-};
-
-//Управляющее воздействие
-struct ModelControl
-{
-    //Тип изменяемого параметра
-    DecisionType decisionType;
-    //Значение (Для FAN_AD и FAN_RESISTOR - значение 0(false), значение 1(true))
-    int value;
-};
-
-struct Decision
-{
-    //Вектор управляющих воздействий
-    QVector<ModelControl> controls;
-    //Этап эксперимента
-    DiagState state;
-};
-
-//Снимок датчиков
+#include <QMetaType>
+// пакет измерений  то, что приходит от ModbusClient через StateMachine (все требует уточнения)
 struct SensorFrame
 {
-    //Метка времени в UNIX-формате
-    qint64 timestampSec;
-    //Температура ДВС
-    double dieselTemp;
-    //Температура АД
-    double adTemp;
-    //Температура балластных резисторов
-    double resistorTemp;
-    //Давление
-    double dieselPressure;
-    //Момент
-    double moment;
-    //Частота
-    double freq;
+    double dieselTemp;      //< температура ДВС
+    double motorTemp;       //< температура АД (асинхронного двигателя)
+    double resistorBalance; //< балансировочный резистор (?)
+    double dieselPressure;  //< давление ДВС
+    double torque;          //< момент
+    double rpm;             //< частота вращения
+    qint64 timestampMs;     //< метка времени
+    int stage;              //< № этапа
 };
-
-//Структра для DataStore
-struct Data
+Q_DECLARE_METATYPE(SensorFrame)
+// лимиты, передаются в DataProcessor в конструкторе (тоже требует уточнения)
+struct ModelConfig
 {
-    //Снимок датчиков
-    SensorFrame frame;
-    //Этап эксперимента
-    DiagState state;
+    double maxDieselTemp;
+    double maxMotorTemp;
+    double maxResistorBalance;
+    double maxDieselPressure;
+    double minDieselPressure;
+    double maxRpm; //< общий лимит оборотов (можно расширить)
 };
+Q_DECLARE_METATYPE(ModelConfig)
+// тип управляющего воздействия (и это требует уточнения)
+enum class ControlType
+{
+    None,
+    Throttle,     // дроссель
+    BrakeTorque,  // тормозной момент
+    TargetRpm,    // целевые обороты
+    MotorEnable,  // вкл/выкл мотора
+    EmergencyStop // аварийный стоп
+};
+// одно управляющее воздействие (тип + значение)
+struct ModelControl
+{
+    ControlType type = ControlType::None;
+    double value = 0.0;
+};
+Q_DECLARE_METATYPE(ModelControl)
+// диагностическое состояние модели (добавлены предаварийные)
+enum class DiagState
+{
+    Ok,
+    PreWarn_RpmHigh,
+    PreWarn_DieselTempHigh,
+    PreWarn_MotorTempHigh,
+    PreWarn_ResistorHigh,
+    PreWarn_PressureHigh,
+    PreWarn_PressureLow,
+    Alarm_RpmOverspeed,
+    Alarm_DieselOverheat,
+    Alarm_MotorOverheat,
+    Alarm_ResistorOverheat,
+    Alarm_PressureOver,
+    Alarm_PressureUnder,
+    Alarm_Generic
+};
+// вектор управляющих воздействий + диагностика
+struct Decision
+{
+    QVector<ModelControl> controls;
+    DiagState state = DiagState::Ok;
+    QString reason; // причина (для последующей записи в БД, если надо записывать, требует уточнения)
+};
+Q_DECLARE_METATYPE(Decision)
+#endif // DATATYPES_H
