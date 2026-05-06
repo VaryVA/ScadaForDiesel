@@ -9,7 +9,6 @@
 
 #include "backend/backend_worker/backendcommunicator.h"
 #include "backend/modbus_client/IModbusBridge.h"
-#include "backend/data_store/DataStore.h"
 #include "backend/data_processing/DataProcessor.h"
 
 class BackendWorker;
@@ -25,7 +24,7 @@ public:
     explicit StateMachine(BackendWorker* backendWorker, QObject* parent = nullptr);
     ~StateMachine();
 
-    void start();  // const ModelConfig& config
+    void start();
     void stop();
 
     void requestNextStage();

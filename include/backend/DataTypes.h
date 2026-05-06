@@ -88,6 +88,8 @@ struct SensorFrame
     double rpm;
     //Метка времени в UNIX-формате
     qint64 timestampMs;
+    // Этап диагностики
+    int stage;
 };
 Q_DECLARE_METATYPE(SensorFrame)
 

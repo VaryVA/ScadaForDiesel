@@ -1,13 +1,8 @@
-<<<<<<< HEAD
-#include "../../../include/backend/state_machine.h"
+#include "../../../include/backend/state_machine/state_machine.h"
 #include "../../../include/backend/backend_worker/backendworker.h"
 #include "../../../include/backend/modbus_client/MockModbusBridge.h"
+#include "../../../include/backend/data_store/DataStore.h"
 #include <QDateTime>
-=======
-#include "backend/state_machine/state_machine.h"
-#include "backend/backend_worker/backendworker.h"
-#include "backend/modbus_client/MockModbusBridge.h"
->>>>>>> 98c4a26adcf739d28649159416e60759df1accb4
 
 StateMachine::StateMachine(BackendWorker* backendWorker, QObject* parent)
     : QObject(parent)
@@ -59,10 +54,10 @@ StateMachine::StateMachine(BackendWorker* backendWorker, QObject* parent)
 
 StateMachine::~StateMachine() { stop(); }
 
-void StateMachine::start(const ModelConfig& config)
+void StateMachine::start()
 {
-    m_config = config;
-    m_dataProcessor->onConfigChanged(config);
+    // m_config = config;
+    m_dataProcessor->onConfigChanged(m_config);
     m_dataProcessor->reset();
     m_currentRunId = static_cast<int>(QDateTime::currentSecsSinceEpoch());
 
@@ -180,6 +175,7 @@ void StateMachine::onReceivedFrontControl(const FrontControl& control)
 
 void StateMachine::onReceivedModelConfig(const ModelConfig& config)
 {
+    m_config = config;
     m_modbusBridge->onWriteConfig(config);
     m_dataProcessor->onConfigChanged(config);
 }

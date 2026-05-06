@@ -25,7 +25,7 @@ set(BACKEND_SOURCES
     modbus_client/IModbusBridge.cpp
     modbus_client/QtModbusBridge.cpp
     modbus_client/MockModbusBridge.cpp
-    # state_machine/state_machine.cpp
+    state_machine/state_machine.cpp
 )
 
 # Заголовки
@@ -39,11 +39,11 @@ set(BACKEND_HEADERS
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/IModbusBridge.h
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/QtModbusBridge.h
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/MockModbusBridge.h
-    # ${PROJECT_SOURCE_DIR}/include/backend/state_machine/state_machine.h
+    ${PROJECT_SOURCE_DIR}/include/backend/state_machine/state_machine.h
 )
 
 # Библиотека
-add_library(backend_lib STATIC)
+add_library(backend_lib SHARED)
 
 target_sources(backend_lib
     PRIVATE
