@@ -7,8 +7,8 @@ BackendWorker::BackendWorker(QObject* parent) :
     qRegisterMetaType<FrontControl>();
     qRegisterMetaType<ModelConfig>();
     qRegisterMetaType<SensorFrame>();
-    connect(&m_machineThread, &QThread::started, m_machine, &StateMachine::Run, Qt::QueuedConnection);
-    connect(&m_machineThread, &QThread::finished, m_machine, &StateMachine::Stop, Qt::QueuedConnection);
+    connect(&m_machineThread, &QThread::started, m_machine, &StateMachine::start, Qt::QueuedConnection);
+    connect(&m_machineThread, &QThread::finished, m_machine, &StateMachine::stop, Qt::QueuedConnection);
 }
 
 void BackendWorker::Run()

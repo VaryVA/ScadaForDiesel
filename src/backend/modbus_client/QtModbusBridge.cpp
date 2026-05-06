@@ -54,19 +54,19 @@ QtModbusBridge::QtModbusBridge(const ModbusConfig& cfg, QObject* parent) : IModb
         QString reason = m_client.errorString();
         if (error == QModbusDevice::ConfigurationError)
         {
-            emit configurationError(error, reason);
+            emit configurationError(reason);
         }
         else if (error == QModbusDevice::ConnectionError)
         {
-            emit connectionError(error, reason);
+            emit connectionError(reason);
         }
         else if (error != QModbusDevice::UnknownError)
         {
-            emit requestError(error, reason);
+            emit requestError(reason);
         }
         else
         {
-            emit generalError(error, reason);
+            emit generalError(reason);
         }
     });
 

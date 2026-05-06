@@ -4,18 +4,19 @@
 #include <QObject>
 #include <QTimer>
 
-#include "DataTypes.h"
-#include "config_data.h"
+#include "backend/DataTypes.h"
+#include "backend/config_data/config_data.h"
 
-#include "backend_worker/backendcommunicator.h"
-#include "modbus_client/IModbusBridge.h"
-#include "data_store/DataStore.h"
-#include "DataProcessor.h"
+#include "backend/backend_worker/backendcommunicator.h"
+#include "backend/modbus_client/IModbusBridge.h"
+#include "backend/data_store/DataStore.h"
+#include "backend/data_processing/DataProcessor.h"
 
 class BackendWorker;
 class IModbusBridge;
 class DataStore;
 class DataProcessor;
+class CSVConnector;
 
 class StateMachine : public QObject
 {
@@ -24,7 +25,7 @@ public:
     explicit StateMachine(BackendWorker* backendWorker, QObject* parent = nullptr);
     ~StateMachine();
 
-    void start(const ModelConfig& config);
+    void start();  // const ModelConfig& config
     void stop();
 
     void requestNextStage();
