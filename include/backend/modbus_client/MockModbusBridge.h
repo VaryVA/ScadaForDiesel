@@ -4,7 +4,7 @@
 
 class ModbusConfig;
 class ModelConfig;
-class ModelControl;
+class Decision;
 
 class MockModbusBridge : public IModbusBridge
 {
@@ -17,7 +17,7 @@ public slots:
     void onReadSensors() override;
     void onReadInfo() override;
     void onWriteConfig(const ModelConfig& cmd) override;
-    void onWriteControl(const ModelControl& control) override;
+    void onWriteDecision(const Decision& decision) override;
 private slots:
     void requestSensors();
     void requestInfo();

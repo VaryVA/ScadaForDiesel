@@ -42,9 +42,9 @@ void MockModbusBridge::onWriteConfig(const ModelConfig& cmd)
     qInfo() << "[MockModbusBridge] Writing a new configuration to the model";
 }
 
-void MockModbusBridge::onWriteControl(const ModelControl& control)
+void MockModbusBridge::onWriteDecision(const Decision& decision)
 {
-    qInfo() << "[MockModbusBridge] Sending a control command to the model";
+    qInfo() << "[MockModbusBridge] Sending a decision to the model";
 }
 
 void MockModbusBridge::requestSensors()
