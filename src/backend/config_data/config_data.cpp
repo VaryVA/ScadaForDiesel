@@ -25,27 +25,33 @@ ModbusConfig ConfigData::LoadConfig()
         if(partLine.count() != 2)
             continue;
         QString& value = partLine[1];
-        switch(partLine)
+        if(m_HOST == value)
         {
-            case m_HOST:
-                config.host = value;
-                break;
-            case m_PORT:
-                config.port = value;
-                break;
-            case m_POLL_FREQ:
-                config.pollFrequencyMs = value;
-                break;
-            case m_TIMEOUT:
-                config.timeoutMs = value;
-                break;
-            case m_RETRIES:
-                config.retries = value;
-                break;
-            case m_UNIT_ID:
-                config.unitId = value;
-                break;
+            config.host = value;
+            continue;
         }
+        if(m_PORT == value)
+        {
+            config.port = value.toUInt();
+            continue;
+        }
+        if(m_POLL_FREQ == value)
+        {
+            config.pollFrequencyMs = value.toInt();
+            continue;
+        }
+        if(m_TIMEOUT == value)
+        {
+            config.timeoutMs = value.toInt();
+            continue;
+        }
+        if(m_RETRIES == value)
+        {
+            config.retries = value.toInt();
+            continue;
+        }
+        if(m_UNIT_ID == value)
+            config.unitId = value.toInt();
     }
 
     file.close();

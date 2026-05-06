@@ -3,7 +3,7 @@
 BackendCommunicator::BackendCommunicator(QObject *parent)
     : QObject{parent} {}
 
-void BackendCommunicator::SendSensorFrameToFrontend(const SensorFrame& sensorFrame)
+void BackendCommunicator::SendSensorFrameToFrontend(SensorFrame& sensorFrame)
 {
     emit SendedSensorFrame(sensorFrame);
 }
