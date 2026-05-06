@@ -1,6 +1,5 @@
-#include "MockModbusBridge.h"
 #include "DataTypes.h"
-#include "IModbusConfigBuilder.h"
+#include "MockModbusBridge.h"
 #include <QObject>
 #include <QDebug>
 #include <QThread>
@@ -46,13 +45,11 @@ void MockModbusBridge::onWriteConfig(const ModelConfig& cmd)
 void MockModbusBridge::requestSensors()
 {
     qInfo() << "[MockModbusBridge] Requesting data";
-    SensorFrame frame = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    SensorFrame frame = { 1, 1, 1, 1, 1, 1, 1, 1 };
     emit sensorsDataReady(frame);
 }
 
 void MockModbusBridge::requestInfo()
 {
     qInfo() << "[MockModbusBridge] Requesting model info";
-    ModelInfo info = { 1, 1, {true, 1, 1, 1} };
-    emit modelInfoReady(info);
 }

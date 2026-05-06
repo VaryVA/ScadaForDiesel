@@ -86,8 +86,8 @@ endif()
 enable_testing()
 
 # Макрос для создания тестов
-macro(add_backend_test TEST_NAME TEST_FILE)
-    add_executable(${TEST_NAME} unit_tests/${TEST_FILE})
+macro(add_backend_test TEST_NAME)
+    add_executable(${TEST_NAME} ${ARGN})
     target_include_directories(${TEST_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/backend_worker
         ${CMAKE_CURRENT_SOURCE_DIR}/config_data
@@ -110,11 +110,26 @@ macro(add_backend_test TEST_NAME TEST_FILE)
 endmacro()
 
 # Добавляем тесты
-add_backend_test(test_backend_worker backend_worker_test/backend_worker_test.h)
-add_backend_test(test_data_processor data_processor_test/data_processor_test.h)
-add_backend_test(test_data_store data_store_test/data_store_test.h)
-add_backend_test(test_modbus_data_bridge modbus_data_bridge_test/modbus_data_bridge_test.h)
-add_backend_test(test_state_machine state_machine_test/state_machine_test.h)
+add_backend_test(test_backend_worker
+    unit_tests/backend_worker_test/backend_worker_test.cpp
+    unit_tests/backend_worker_test/backend_worker_test.h
+)
+add_backend_test(test_data_processor
+    unit_tests/data_processor_test/data_processor_test.cpp
+    unit_tests/data_processor_test/data_processor_test.h
+)
+add_backend_test(test_data_store
+    unit_tests/data_store_test/data_store_test.cpp
+    unit_tests/data_store_test/data_store_test.h
+)
+add_backend_test(test_modbus_data_bridge
+    unit_tests/modbus_data_bridge_test/modbus_data_bridge_test.cpp
+    unit_tests/modbus_data_bridge_test/modbus_data_bridge_test.h
+)
+add_backend_test(test_state_machine
+    unit_tests/state_machine_test/state_machine_test.cpp
+    unit_tests/state_machine_test/state_machine_test.h
+)
 
 # Вывод информации о сборке
 message(STATUS "Backend Library: backend_lib")

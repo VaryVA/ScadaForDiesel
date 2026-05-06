@@ -1,5 +1,4 @@
 #include <QtTest>
-#include <../src/backend_worker/backend_worker.h>
 
 class BackendWorkerTest : public QObject {
     Q_OBJECT
@@ -18,6 +17,4 @@ private slots:
     void isAlarmEvent();
     void isWarningEvent();
     void isProcessFinished();
-
-
-} // BackendWorkerTest
+}; // BackendWorkerTest

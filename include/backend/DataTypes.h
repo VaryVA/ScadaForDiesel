@@ -5,6 +5,53 @@
 #include <QString>
 #include <QVector>
 #include <QMetaType>
+// Control registers mapping, read/write, 1-bit
+struct CoilsRegistersScheme
+{
+    bool motorEnabled;
+};
+
+// Device status registers mapping, only read, 1-bit
+struct DiscreteRegistersScheme
+{
+    bool fanAd;
+    bool fanBall;
+};
+
+// Settings and variables registers mapping, read/write, 16-bit
+struct HoldingRegistersScheme
+{
+    double targetRpm;
+    double throttlePosition;
+    double brakeTorque;
+};
+
+// Sensor data registers mapping, only read, 16-bit
+struct InputRegistersScheme
+{
+    double rpm, torque;
+    double dieselTemp, motorTemp, resistorTemp, dieselPressure;
+    double throttle, brakeTorque;
+};
+
+//Структра для задания конфигурации Modbus-клиента
+struct ModbusConfig
+{
+    //Ip-адрес Modbus-сервера
+    QString host;
+    //Порт Modbus-сервера
+    quint16 port = 1502;
+    int pollFrequencyMs = 1000;
+    int timeoutMs = 1000;
+    int retries = 3;
+    int unitId = 1;  // we assume one modbus device, so unitId will be ignored
+    // Start address is 0 for each register type
+    CoilsRegistersScheme coils;
+    DiscreteRegistersScheme discrete;
+    InputRegistersScheme input;
+    HoldingRegistersScheme holding;
+};
+
 // пакет измерений  то, что приходит от ModbusClient через StateMachine (все требует уточнения)
 struct SensorFrame
 {
@@ -18,6 +65,7 @@ struct SensorFrame
     int stage;              //< № этапа
 };
 Q_DECLARE_METATYPE(SensorFrame)
+
 // лимиты, передаются в DataProcessor в конструкторе (тоже требует уточнения)
 struct ModelConfig
 {
@@ -29,6 +77,7 @@ struct ModelConfig
     double maxRpm; //< общий лимит оборотов (можно расширить)
 };
 Q_DECLARE_METATYPE(ModelConfig)
+
 // тип управляющего воздействия (и это требует уточнения)
 enum class ControlType
 {
@@ -39,6 +88,7 @@ enum class ControlType
     MotorEnable,  // вкл/выкл мотора
     EmergencyStop // аварийный стоп
 };
+
 // одно управляющее воздействие (тип + значение)
 struct ModelControl
 {
@@ -46,9 +96,11 @@ struct ModelControl
     double value = 0.0;
 };
 Q_DECLARE_METATYPE(ModelControl)
+
 // диагностическое состояние модели (добавлены предаварийные)
 enum class DiagState
 {
+    IDLE,
     Ok,
     PreWarn_RpmHigh,
     PreWarn_DieselTempHigh,
@@ -64,6 +116,18 @@ enum class DiagState
     Alarm_PressureUnder,
     Alarm_Generic
 };
+
+//Структра для управления моделью фронтом
+struct FrontControl
+{
+    //Этап эксперимента
+    DiagState state;
+    //Максимальная частота в зависимости от этапа(необязательный параметр на некоторых этапах - может быть не задан)
+    int maxFreq;
+    //Время выполнения этапа в минутах(необязательный параметр на некоторых этапах - может быть не задан)
+    unsigned int time;
+};
+
 // вектор управляющих воздействий + диагностика
 struct Decision
 {
@@ -72,4 +136,13 @@ struct Decision
     QString reason; // причина (для последующей записи в БД, если надо записывать, требует уточнения)
 };
 Q_DECLARE_METATYPE(Decision)
+
+//Структра для DataStore
+struct Data
+{
+    //Снимок датчиков
+    SensorFrame frame;
+    //Этап эксперимента
+    DiagState state;
+};
 #endif // DATATYPES_H

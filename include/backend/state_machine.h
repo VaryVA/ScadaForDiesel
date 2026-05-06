@@ -4,23 +4,25 @@
 #include <QObject>
 #include <QTimer>
 #include "DataTypes.h"
-#include "backend_worker/backendworker.h"
 #include "backend_worker/backendcommunicator.h"
 #include "config_data.h"
-#include "modbus_client/QtModbusBridge.h"
+
+class IModbusBridge;
+class BackendWorker;
 
 class StateMachine : public QObject
 {
     Q_OBJECT
 public:
-    explicit StateMachine(BackendWorker* backendWorker, QObject *parent = nullptr);
+    explicit StateMachine(BackendWorker* backendWorker, QObject* parent = nullptr);
+    ~StateMachine();
 
     void Run();
     void Stop();
 
-    void requestStart(const ModelConfig &config);
+    void requestStart(const ModelConfig& config);
     void requestNextStage();
-    void requestAbort(const QString &reason = QString());
+    void requestAbort(const QString& reason = QString());
 
     DiagState currentState() const;
     int currentStageIndex() const;
@@ -41,15 +43,12 @@ private:
     void transitionTo(DiagState newState);
 
     BackendCommunicator* m_communicator;
-    QtModbusBridge* m_modbusBridge;
+    IModbusBridge* m_modbusBridge;
 
     DiagState m_state = DiagState::IDLE;
     ModelConfig m_config;
-    QTimer *m_stageTimer;
+    QTimer* m_stageTimer;
     int m_currentStageIndex = -1;
     int m_previousStageIndex = -1;
 };
-
-
-
 #endif //State_machine H

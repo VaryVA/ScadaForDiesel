@@ -1,8 +1,8 @@
 #pragma once
 #include "IModbusBridge.h"
-#include "IModbusConfigBuilder.h"
 #include <QTimer>
 
+class ModbusConfig;
 class ModelConfig;
 
 class MockModbusBridge : public IModbusBridge

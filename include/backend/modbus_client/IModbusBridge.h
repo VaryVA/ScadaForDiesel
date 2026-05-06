@@ -1,7 +1,6 @@
 #pragma once
 #include <QObject>
 #include <QString>
-#include <QModbusDevice>
 
 class ModbusConfig;
 class ModelConfig;
@@ -33,28 +32,24 @@ signals:
     // Error signals
     /**
      * @brief Emitted when configuration fails during startup/setup.
-     * Groups QModbusDevice errors: ConfigurationError.
      * Note: config validation should be handled by the config builder,
      * so this error would not even happen.
      */
-    void configurationError(QModbusDevice::Error type, const QString& reason);
+    void configurationError(const QString& reason);
     /**
      * @brief Emitted when physical connection fails or is lost.
      * Groups QModbusDevice errors: ConnectionError.
      */
-    void connectionError(QModbusDevice::Error type, const QString& reason);
+    void connectionError(const QString& reason);
     /**
      * @brief Emitted when a read/write request fails.
      * Occurs during: Polling requests, direct read/write requests.
-     * Groups QModbusDevice errors: ReadError, WriteError,
-     * TimeoutError, ReplyAbortedError, InvalidResponseError, ProtocolError.
      */
-    void requestError(QModbusDevice::Error type, const QString& reason);
+    void requestError(const QString& reason);
     /**
      * @brief Any error not fitting above categories
-     * Groups QModbusDevice errors: UnknownError.
      */
-    void generalError(QModbusDevice::Error type, const QString& reason);
+    void generalError(const QString& reason);
     // Transition states
     void connectionLost();
     void connectionRestored();

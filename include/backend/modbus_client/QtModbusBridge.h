@@ -1,10 +1,10 @@
 #pragma once
 #include "IModbusBridge.h"
-#include "IModbusConfigBuilder.h"
 #include <QTimer>
 #include <QModbusDataUnit>
 #include <QModbusTcpClient>
 
+class ModbusConfig;
 class ModelConfig;
 
 class QtModbusBridge : public IModbusBridge

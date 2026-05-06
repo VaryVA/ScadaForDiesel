@@ -24,7 +24,7 @@ signals:
     void SendedSensorFrame(SensorFrame& sensorFrame);
     void SendedEmergencyStopInfo();
     void SendedFeedback(bool isComplete);
-    void SendedData(QVector<Data> data);
+    void SendedData(QVector<Data>& data);
 
     //Сигналы для получения
     //Сигнал на приход нового конфига модели от фронта
