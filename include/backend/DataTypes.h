@@ -8,7 +8,8 @@
 // Control registers mapping, read/write, 1-bit
 struct CoilsRegistersScheme
 {
-    bool motorEnabled;
+    bool fanAd;
+    bool fanBall;
 };
 
 // Device status registers mapping, only read, 1-bit
@@ -21,17 +22,37 @@ struct DiscreteRegistersScheme
 // Settings and variables registers mapping, read/write, 16-bit
 struct HoldingRegistersScheme
 {
-    double targetRpm;
-    double throttlePosition;
-    double brakeTorque;
+    //Максимальная температура ДВС
+    double maxDieselTemp;
+    //Максимальная температура АД
+    double maxMotorTemp;
+    //Максимальная температура балластных резисторов
+    double maxResistorTemp;
+    //Максимальное давление в ДВС
+    double maxDieselPressure;
+    //Минимальное давление в ДВС
+    double minDieselPressure;
+    //Максимальная частота в режиме притирки
+    int maxRpmLap;
+    //Максимальная частота в режиме обкатки
+    int maxRpmHot;
 };
 
 // Sensor data registers mapping, only read, 16-bit
 struct InputRegistersScheme
 {
-    double rpm, torque;
-    double dieselTemp, motorTemp, resistorTemp, dieselPressure;
-    double throttle, brakeTorque;
+    //Температура ДВС
+    double dieselTemp;
+    //Температура АД
+    double motorTemp;
+    //Температура балластных резисторов
+    double resistorTemp;
+    //Давление
+    double dieselPressure;
+    //Момент
+    double torque;
+    //Частота вращения
+    double rpm;
 };
 
 //Структра для задания конфигурации Modbus-клиента
@@ -52,33 +73,47 @@ struct ModbusConfig
     HoldingRegistersScheme holding;
 };
 
-// пакет измерений  то, что приходит от ModbusClient через StateMachine (все требует уточнения)
+//Снимок датчиков
 struct SensorFrame
 {
-    double dieselTemp;      //< температура ДВС
-    double motorTemp;       //< температура АД (асинхронного двигателя)
-    double resistorBalance; //< балансировочный резистор (?)
-    double dieselPressure;  //< давление ДВС
-    double torque;          //< момент
-    double rpm;             //< частота вращения
-    qint64 timestampMs;     //< метка времени
-    int stage;              //< № этапа
+    //Температура ДВС
+    double dieselTemp;
+    //Температура АД
+    double adTemp;
+    //Температура балластных резисторов
+    double resistorTemp;
+    //Давление
+    double dieselPressure;
+    //Момент
+    double torque;
+    //Частота
+    double rpm;
+    //Метка времени в UNIX-формате
+    qint64 timestampMs;
 };
 Q_DECLARE_METATYPE(SensorFrame)
 
-// лимиты, передаются в DataProcessor в конструкторе (тоже требует уточнения)
+// лимиты, передаются в конструктор DataProcessor и в IModbusBridge для записи в модель
 struct ModelConfig
 {
+    //Максимальная температура ДВС
     double maxDieselTemp;
+    //Максимальная температура АД
     double maxMotorTemp;
-    double maxResistorBalance;
+    //Максимальная температура балластных резисторов
+    double maxResistorTemp;
+    //Максимальное давление в ДВС
     double maxDieselPressure;
+    //Минимальное давление в ДВС
     double minDieselPressure;
-    double maxRpm; //< общий лимит оборотов (можно расширить)
+    //Максимальная частота в режиме притирки
+    int maxRpmLap;
+    //Максимальная частота в режиме обкатки
+    int maxRpmHot;
 };
 Q_DECLARE_METATYPE(ModelConfig)
 
-// тип управляющего воздействия (и это требует уточнения)
+// тип управляющего воздействия (это требует уточнения)
 enum class ControlType
 {
     None,

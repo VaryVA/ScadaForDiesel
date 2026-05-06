@@ -42,6 +42,11 @@ void MockModbusBridge::onWriteConfig(const ModelConfig& cmd)
     qInfo() << "[MockModbusBridge] Writing a new configuration to the model";
 }
 
+void MockModbusBridge::onWriteControl(const ModelControl& control)
+{
+    qInfo() << "[MockModbusBridge] Sending a control command to the model";
+}
+
 void MockModbusBridge::requestSensors()
 {
     qInfo() << "[MockModbusBridge] Requesting data";

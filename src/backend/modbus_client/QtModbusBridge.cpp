@@ -107,6 +107,11 @@ void QtModbusBridge::onWriteConfig(const ModelConfig& cmd)
 
 }
 
+void QtModbusBridge::onWriteControl(const ModelControl& control)
+{
+
+}
+
 void QtModbusBridge::parseSensorsResponse(QModbusReply* reply)
 {
     if (reply->error() == QModbusDevice::NoError)

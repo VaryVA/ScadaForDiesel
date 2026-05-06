@@ -4,7 +4,7 @@
 
 class ModbusConfig;
 class ModelConfig;
-class ModelInfo;
+class ModelControl;
 class SensorFrame;
 
 class IModbusBridge : public QObject
@@ -22,13 +22,15 @@ public slots:
     virtual void onReadSensors() = 0;
     // Handling direct call to read the model info
     virtual void onReadInfo() = 0;
-    // Handling direct call to write new model configuration
+    // Handling direct call to write new model configuration at startup
     virtual void onWriteConfig(const ModelConfig& cmd) = 0;
+    // Handling direct call to write controlling command at runtime
+    virtual void onWriteControl(const ModelControl& control) = 0;
 signals:
     // A response to the sensor data request has been received
     void sensorsDataReady(const SensorFrame& data);
     // A response to the model info request has been received
-    void modelInfoReady(const ModelInfo& data);
+    void modelInfoReady(const ModelConfig& data);
     // Error signals
     /**
      * @brief Emitted when configuration fails during startup/setup.
