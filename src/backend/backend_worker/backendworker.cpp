@@ -1,5 +1,5 @@
 #include "backend/backend_worker/backendworker.h"
-#include "backend/state_machine.h"
+#include "backend/state_machine/state_machine.h"
 
 BackendWorker::BackendWorker(QObject* parent) :
     m_machine(new StateMachine(this, parent)), m_machineThread(QThread(this)), QObject{parent}

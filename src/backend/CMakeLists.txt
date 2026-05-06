@@ -41,12 +41,13 @@ endif()
 set(BACKEND_HEADERS
     ${PROJECT_SOURCE_DIR}/include/backend/backend_worker/backendworker.h
     ${PROJECT_SOURCE_DIR}/include/backend/backend_worker/backendcommunicator.h
-    ${PROJECT_SOURCE_DIR}/include/backend/DataProcessor.h
+    ${PROJECT_SOURCE_DIR}/include/backend/data_processing/DataProcessor.h
+    ${PROJECT_SOURCE_DIR}/include/backend/data_store/DataStore.h
     ${PROJECT_SOURCE_DIR}/include/backend/DataTypes.h
-    ${PROJECT_SOURCE_DIR}/include/backend/config_data.h
+    ${PROJECT_SOURCE_DIR}/include/backend/config_data/config_data.h
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/IModbusBridge.h
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/MockModbusBridge.h
-    ${PROJECT_SOURCE_DIR}/include/backend/state_machine.h
+    ${PROJECT_SOURCE_DIR}/include/backend/state_machine/state_machine.h
 )
 
 # Библиотека

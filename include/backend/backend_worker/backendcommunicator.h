@@ -2,7 +2,7 @@
 #define BACKENDCOMMUNICATOR_H
 
 #include <QObject>
-#include "../DataTypes.h"
+#include "backend/DataTypes.h"
 
 class BackendCommunicator : public QObject
 {
