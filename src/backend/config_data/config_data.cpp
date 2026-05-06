@@ -1,4 +1,4 @@
-#include "../../../include/backend/config_data.h"
+#include "backend/config_data.h"
 
 ConfigData::ConfigData(){}
 

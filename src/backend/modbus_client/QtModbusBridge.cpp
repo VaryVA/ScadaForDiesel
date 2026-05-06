@@ -1,5 +1,5 @@
-#include "QtModbusBridge.h"
-#include "DataTypes.h"
+#include "backend/DataTypes.h"
+#include "backend/modbus_client/QtModbusBridge.h"
 #include <QObject>
 #include <QDebug>
 #include <QModbusTcpClient>

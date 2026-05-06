@@ -1,5 +1,5 @@
-#include "DataTypes.h"
-#include "MockModbusBridge.h"
+#include "backend/DataTypes.h"
+#include "backend/modbus_client/MockModbusBridge.h"
 #include <QObject>
 #include <QDebug>
 #include <QThread>

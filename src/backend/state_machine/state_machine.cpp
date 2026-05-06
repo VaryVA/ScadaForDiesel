@@ -1,6 +1,6 @@
-#include "../../../include/backend/state_machine.h"
-#include "../../../include/backend/backend_worker/backendworker.h"
-#include "../../../include/backend/modbus_client/MockModbusBridge.h"
+#include "backend/state_machine.h"
+#include "backend/backend_worker/backendworker.h"
+#include "backend/modbus_client/MockModbusBridge.h"
 
 StateMachine::StateMachine(BackendWorker* backendWorker, QObject *parent) :
     m_communicator(new BackendCommunicator(this)),

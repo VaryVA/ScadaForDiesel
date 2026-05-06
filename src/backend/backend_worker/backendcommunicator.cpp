@@ -1,4 +1,4 @@
-#include "../../../include/backend/backend_worker/backendcommunicator.h"
+#include "backend/backend_worker/backendcommunicator.h"
 
 BackendCommunicator::BackendCommunicator(QObject *parent)
     : QObject{parent} {}
