@@ -106,19 +106,19 @@ void DataProcessor::processFrame(SensorFrame frame)
         }
     }
     // балансировочный резистор
-    if (isParamActiveOnStage("resistorBalance", m_currentStage))
+    if (isParamActiveOnStage("resistorTemp", m_currentStage))
     {
-        if (frame.resistorBalance >= m_config.maxResistorBalance)
+        if (frame.resistorTemp >= m_config.maxResistorTemp)
         {
             promote(2, DiagState::Alarm_ResistorOverheat,
                     QStringLiteral("Превышение по балансировочному резистору: %1")
-                        .arg(frame.resistorBalance));
+                        .arg(frame.resistorTemp));
         }
-        else if (frame.resistorBalance >= m_config.maxResistorBalance * WARN_RATIO)
+        else if (frame.resistorTemp >= m_config.maxResistorTemp * WARN_RATIO)
         {
             promote(1, DiagState::PreWarn_ResistorHigh,
                     QStringLiteral("Балансировочный резистор близок к пределу: %1")
-                        .arg(frame.resistorBalance));
+                        .arg(frame.resistorTemp));
         }
     }
     // давление ДВС — верхняя граница
@@ -210,7 +210,7 @@ bool DataProcessor::isParamActiveOnStage(const QString &param, int stage) const
                 stage == Stage::HOT_WITH_LOAD);
     }
     // балансировочный резистор — на этапе с нагрузкой
-    if (param == "resistorBalance")
+    if (param == "resistorTemp")
     {
         return (stage == Stage::HOT_WITH_LOAD);
     }

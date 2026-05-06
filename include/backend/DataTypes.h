@@ -32,10 +32,8 @@ struct HoldingRegistersScheme
     double maxDieselPressure;
     //Минимальное давление в ДВС
     double minDieselPressure;
-    //Максимальная частота в режиме притирки
-    int maxRpmLap;
-    //Максимальная частота в режиме обкатки
-    int maxRpmHot;
+    //Общая частота оборотов (можно расширить)
+    int maxRpm;
 };
 
 // Sensor data registers mapping, only read, 16-bit
@@ -106,10 +104,8 @@ struct ModelConfig
     double maxDieselPressure;
     //Минимальное давление в ДВС
     double minDieselPressure;
-    //Максимальная частота в режиме притирки
-    int maxRpmLap;
-    //Максимальная частота в режиме обкатки
-    int maxRpmHot;
+    //Общая частота оборотов (можно расширить)
+    int maxRpm;
 };
 Q_DECLARE_METATYPE(ModelConfig)
 

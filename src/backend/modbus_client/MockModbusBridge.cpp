@@ -50,7 +50,7 @@ void MockModbusBridge::onWriteControl(const ModelControl& control)
 void MockModbusBridge::requestSensors()
 {
     qInfo() << "[MockModbusBridge] Requesting data";
-    SensorFrame frame = { 1, 1, 1, 1, 1, 1, 1, 1 };
+    SensorFrame frame = { 1, 1, 1, 1, 1, 1, 1 };
     emit sensorsDataReady(frame);
 }
 
