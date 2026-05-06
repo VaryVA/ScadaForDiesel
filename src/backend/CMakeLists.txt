@@ -1,55 +1,128 @@
 cmake_minimum_required(VERSION 3.16)
 project(ScadaForDiesel LANGUAGES CXX)
 
+# Настройки проекта
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Test)
+# Зависимости
+find_package(Qt6 REQUIRED COMPONENTS 
+    Core 
+    Network
+    Test
+)
 
-# Библиотека для бэкенда
+# Modbus опционально
+find_package(Qt6 COMPONENTS Modbus QUIET)
+if(NOT Qt6Modbus_FOUND)
+    message(WARNING "Qt6 Modbus not found - QtModbusBridge will be excluded from build")
+    message(WARNING "Install: sudo apt install qt6-serial-dev (or equivalent)")
+endif()
+
+# Основная библиотека Backend
 set(BACKEND_SOURCES
-    src/backend_worker/backend_worker.cpp
-    src/data_processor/data_processor.cpp
-    src/data_store/data_store.cpp
-    src/modbus_data_bridge/modbus_data_bridge.cpp
-    src/state_machine/state_machine.cpp
+    backend_worker/backendworker.cpp
+    backend_worker/backendcommunicator.cpp
+    config_data/config_data.cpp
+    data_processing/DataProcessor.cpp
+    data_store/DataStore.cpp
+    modbus_client/IModbusBridge.cpp
+    modbus_client/MockModbusBridge.cpp
+    state_machine/state_machine.cpp
+)
+
+# Добавляем QtModbusBridge только если Modbus доступен
+if(Qt6Modbus_FOUND)
+    list(APPEND BACKEND_SOURCES modbus_client/QtModbusBridge.cpp)
+endif()
+
+set(BACKEND_HEADERS
+    backend_worker/backendworker.h
+    backend_worker/backendcommunicator.h
+    data_processor/DataProcessor.h
+    data_store/DataStore.h
+    modbus_client/IModbusBridge.h
+    modbus_client/QtModbusBridge.h
+    modbus_client/MockModbusBridge.h
 )
 
 add_library(backend_lib STATIC ${BACKEND_SOURCES})
 
-# Указываем папки с заголовками
-target_include_directories(backend_lib PUBLIC 
-    src/backend_worker
-    src/data_store
-    src/data_processor
-    src/modbus_data_bridge
-    src/state_machine
+# Включаемые директории для библиотеки
+target_include_directories(backend_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/backend_worker
+    ${CMAKE_CURRENT_SOURCE_DIR}/config_data
+    ${CMAKE_CURRENT_SOURCE_DIR}/data_processing
+    ${CMAKE_CURRENT_SOURCE_DIR}/data_store
+    ${CMAKE_CURRENT_SOURCE_DIR}/modbus_client
+    ${CMAKE_CURRENT_SOURCE_DIR}/state_machine
 )
-target_link_libraries(backend_lib PUBLIC Qt6::Core)
 
+# Включаемые директории из include/
+target_include_directories(backend_lib PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/backend
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/backend/backend_worker
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/backend/data_store
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include/backend/modbus_client
+)
+
+# Зависимости
+target_link_libraries(backend_lib 
+    PUBLIC 
+        Qt6::Core
+        Qt6::Network
+        Qt6::Test
+)
+
+if(Qt6Modbus_FOUND)
+    target_link_libraries(backend_lib PUBLIC Qt6::Modbus)
+endif()
+
+# Unit Tests
 enable_testing()
 
-# Тест для BackendWorker
-add_executable(test_backend_worker unit_tests/backend_worker_test/backend_worker_test.cpp)
-target_link_libraries(test_backend_worker PRIVATE Qt6::Test backend_lib)
-add_test(NAME BackendWorkerTest COMMAND test_backend_worker)
+# Макрос для создания тестов
+macro(add_backend_test TEST_NAME TEST_FILE)
+    add_executable(${TEST_NAME} unit_tests/${TEST_FILE})
+    target_include_directories(${TEST_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/backend_worker
+        ${CMAKE_CURRENT_SOURCE_DIR}/config_data
+        ${CMAKE_CURRENT_SOURCE_DIR}/data_processing
+        ${CMAKE_CURRENT_SOURCE_DIR}/data_store
+        ${CMAKE_CURRENT_SOURCE_DIR}/modbus_client
+        ${CMAKE_CURRENT_SOURCE_DIR}/state_machine
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+    )
+    target_link_libraries(${TEST_NAME} PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        Qt6::Network
+        backend_lib
+    )
+    if(Qt6Modbus_FOUND)
+        target_link_libraries(${TEST_NAME} PRIVATE Qt6::Modbus)
+    endif()
+    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+endmacro()
 
-# Тест для DataProcessor
-add_executable(test_data_processor unit_tests/data_processor_test/data_processor_test.cpp)
-target_link_libraries(test_data_processor PRIVATE Qt6::Test backend_lib)
-add_test(NAME DataProcessorTest COMMAND test_data_processor)
+# Добавляем тесты
+add_backend_test(test_backend_worker backend_worker_test/backend_worker_test.h)
+add_backend_test(test_data_processor data_processor_test/data_processor_test.h)
+add_backend_test(test_data_store data_store_test/data_store_test.h)
+add_backend_test(test_modbus_data_bridge modbus_data_bridge_test/modbus_data_bridge_test.h)
+add_backend_test(test_state_machine state_machine_test/state_machine_test.h)
 
-# Тест для DataStore
-add_executable(test_data_store unit_tests/data_store_test/data_store_test.cpp)
-target_link_libraries(test_data_store PRIVATE Qt6::Test backend_lib)
-add_test(NAME DataStoreTest COMMAND test_data_store)
-
-# Тест для ModbusDataBridge
-add_executable(test_modbus_data_bridge unit_tests/modbus_data_bridge_test/modbus_data_bridge_test.cpp)
-target_link_libraries(test_modbus_data_bridge PRIVATE Qt6::Test backend_lib)
-add_test(NAME ModbusDataBridgeTest COMMAND test_modbus_data_bridge)
-
-# Тест для StateMachine
-add_executable(test_state_machine unit_tests/state_machine_test/state_machine_test.cpp)
-target_link_libraries(test_state_machine PRIVATE Qt6::Test backend_lib)
-add_test(NAME StateMachineTest COMMAND test_state_machine)
+# Вывод информации о сборке
+message(STATUS "Backend Library: backend_lib")
+message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "Qt6 Version: ${Qt6Core_VERSION}")
+if(Qt6Modbus_FOUND)
+    message(STATUS "Qt6 Modbus: FOUND (QtModbusBridge enabled)")
+else()
+    message(STATUS "Qt6 Modbus: NOT FOUND (using MockModbusBridge only)")
+endif()
+message(STATUS "Tests enabled")

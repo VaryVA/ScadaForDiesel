@@ -10,7 +10,7 @@ private slots:
     void isStart();
     void doubleStart();
     void isStop();
-    void doubleStop
+    void doubleStop();
     void moveOnNextStage();
     void correctCurrentStatus();
     void isFinishedReport();
