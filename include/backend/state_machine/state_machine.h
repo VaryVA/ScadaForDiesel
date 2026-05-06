@@ -3,12 +3,19 @@
 
 #include <QObject>
 #include <QTimer>
-#include "backend/DataTypes.h"
-#include "backend/backend_worker/backendcommunicator.h"
-#include "backend/config_data/config_data.h"
 
-class IModbusBridge;
+#include "DataTypes.h"
+#include "config_data.h"
+
+#include "backend_worker/backendcommunicator.h"
+#include "modbus_client/IModbusBridge.h"
+#include "data_store/DataStore.h"
+#include "DataProcessor.h"
+
 class BackendWorker;
+class IModbusBridge;
+class DataStore;
+class DataProcessor;
 
 class StateMachine : public QObject
 {
@@ -17,10 +24,9 @@ public:
     explicit StateMachine(BackendWorker* backendWorker, QObject* parent = nullptr);
     ~StateMachine();
 
-    void Run();
-    void Stop();
+    void start(const ModelConfig& config);
+    void stop();
 
-    void requestStart(const ModelConfig& config);
     void requestNextStage();
     void requestAbort(const QString& reason = QString());
 
@@ -32,23 +38,48 @@ signals:
     void finished(DiagState finalState);
 
 private slots:
-    void onStageTimeout();
+    void pollModbus();
+    void onSensorsDataReady(const SensorFrame& frame);
+    void onDecisionReady(const Decision& decision);
 
-    //Слот для обработки пришедшего запроса на изменения этапа эксперимента от фронта
-    void onReceivedFrontControl(FrontControl control);
-    //Слот для обработки пришедшего кофига от фронта
-    void onReceivedModelConfig(ModelConfig config);
+    // Ошибки Modbus
+    void onModbusConfigurationError(const QString& reason);
+    void onModbusConnectionError(const QString& reason);
+    void onModbusRequestError(const QString& reason);
+    void onModbusConnectionLost();
+    void onModbusConnectionRestored();
+
+    // Команды фронта
+    void onReceivedFrontControl(const FrontControl& control);
+    void onReceivedModelConfig(const ModelConfig& config);
 
 private:
     void transitionTo(DiagState newState);
+    void applyControls(const QVector<ModelControl>& controls);
 
+    // Коммуникатор
     BackendCommunicator* m_communicator;
-    IModbusBridge* m_modbusBridge;
 
+    // Модули
+    IModbusBridge*   m_modbusBridge;
+    DataStore*       m_dataStore;
+    DataProcessor*   m_dataProcessor;
+
+    // Хранилища низкого уровня
+    CSVConnector* m_measurementConnector;
+    CSVConnector* m_eventConnector;
+
+    // Таймеры
+    QTimer* m_pollTimer;
+    QTimer* m_stageTimer;
+
+    // Состояние
     DiagState m_state = DiagState::IDLE;
     ModelConfig m_config;
-    QTimer* m_stageTimer;
+    SensorFrame m_currentSensorFrame;
     int m_currentStageIndex = -1;
-    int m_previousStageIndex = -1;
+    int m_currentRunId = 0;        // для связывания записей в datastore
+    qint64 m_runStartTime = 0;     // для репортов
 };
-#endif //State_machine H
+
+#endif // STATE_MACHINE_H
