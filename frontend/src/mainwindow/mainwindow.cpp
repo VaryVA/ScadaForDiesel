@@ -2,15 +2,15 @@
 #include "./ui_mainwindow.h"
 
 #include "../tabs/main_tab/main_tab.h"
+#include "../tabs/settings_tab/settings_tab.h"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
     // Добавляем виджеты на вкладки
     ui->tabWidget->addTab(new main_tab(this), "Мнемосхема");
+     ui->tabWidget->addTab(new settings_tab(this), "Настройки");
     ui->tabWidget->setStyleSheet(
         /* Стиль для области содержимого */
         "QTabWidget::pane {"
@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
         "    background-color: #c8c8c8;"
         "}"
     );
-
+    connect(ui->tabWidget, &QTabWidget::currentChanged, this, &MainWindow::on_mainTabChanged);
 }
 
 MainWindow::~MainWindow()
@@ -45,3 +45,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::on_mainTabChanged(int index)
+{
+    qDebug() << "Tab changed: " << index;
+}

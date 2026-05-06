@@ -17,5 +17,8 @@ public:
 
 private:
     Ui::MainWindow *ui;
+
+private slots:
+    void on_mainTabChanged(int index);
 };
 #endif // MAINWINDOW_H

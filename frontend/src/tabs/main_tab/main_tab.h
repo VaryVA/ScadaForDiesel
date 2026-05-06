@@ -15,6 +15,10 @@ public:
     explicit main_tab(QWidget *parent = nullptr);
     ~main_tab();
 
+private slots:
+    void on_startPushButton_clicked();
+    void on_stopPushButton_clicked();
+
 private:
     Ui::main_tab *ui;
 };
