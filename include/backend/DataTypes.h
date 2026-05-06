@@ -6,7 +6,8 @@
 // Control registers mapping, read/write, 1-bit
 struct CoilsRegistersScheme
 {
-    bool motorEnabled;
+    bool fanAd;
+    bool fanBall;
 };
 
 // Device status registers mapping, only read, 1-bit
@@ -19,17 +20,37 @@ struct DiscreteRegistersScheme
 // Settings and variables registers mapping, read/write, 16-bit
 struct HoldingRegistersScheme
 {
-    double targetRpm;
-    double throttlePosition;
-    double brakeTorque;
+    //Максимальная температура ДВС
+    double maxDieselTemp;
+    //Максимальная температура АД
+    double maxAdTemp;
+    //Максимальная температура балластных резисторов
+    double maxResistorTemp;
+    //Максимальное давление в ДВС
+    double maxDieselPressure;
+    //Минимальное давление в ДВС
+    double minDieselPressure;
+    //Максимальная частота в режиме притирки
+    int maxFreqLap;
+    //Максимальная частота в режиме обкатки
+    int maxFreqHot;
 };
 
 // Sensor data registers mapping, only read, 16-bit
 struct InputRegistersScheme
 {
-    double rpm, torque;
-    double dieselTemp, motorTemp, resistorTemp, dieselPressure;
-    double throttle, brakeTorque;
+    //Температура ДВС
+    double dieselTemp;
+    //Температура АД
+    double adTemp;
+    //Температура балластных резисторов
+    double resistorTemp;
+    //Давление
+    double dieselPressure;
+    //Момент
+    double moment;
+    //Частота
+    double freq;
 };
 
 //Структра для задания конфигурации Modbus-клиента
@@ -43,7 +64,7 @@ struct ModbusConfig
     int timeoutMs = 1000;
     int retries = 3;
     int unitId = 1;  // we assume one modbus device, so unitId will be ignored
-    // Start address is 0 for each register type
+    // Start address is 0 for each register type, registers ordered sequentially
     CoilsRegistersScheme coils;
     DiscreteRegistersScheme discrete;
     InputRegistersScheme input;
@@ -145,5 +166,3 @@ struct Data
     //Этап эксперимента
     DiagState state;
 };
-
-
