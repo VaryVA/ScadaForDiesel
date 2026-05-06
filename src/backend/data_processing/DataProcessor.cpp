@@ -1,4 +1,4 @@
-#include "backend/DataProcessor.h"
+#include "backend/data_processing/DataProcessor.h"
 // этапы — должны совпадать с StateMachine (согласовать)
 namespace Stage
 {

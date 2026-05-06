@@ -3,8 +3,8 @@
 
 #include <QObject>
 #include <QThread>
-#include "../state_machine.h"
-#include "../DataTypes.h"
+#include "backend/state_machine/state_machine.h"
+#include "backend/DataTypes.h"
 
 //Класс взаимодействия с фронтом
 class BackendWorker : public QObject

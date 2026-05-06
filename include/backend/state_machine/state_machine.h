@@ -3,9 +3,9 @@
 
 #include <QObject>
 #include <QTimer>
-#include "DataTypes.h"
-#include "backend_worker/backendcommunicator.h"
-#include "config_data.h"
+#include "backend/DataTypes.h"
+#include "backend/backend_worker/backendcommunicator.h"
+#include "backend/config_data/config_data.h"
 
 class IModbusBridge;
 class BackendWorker;

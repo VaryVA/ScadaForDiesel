@@ -8,14 +8,14 @@
 // Control registers mapping, read/write, 1-bit
 struct CoilsRegistersScheme
 {
-    bool fanAd;
+    bool fanMotor;
     bool fanBall;
 };
 
 // Device status registers mapping, only read, 1-bit
 struct DiscreteRegistersScheme
 {
-    bool fanAd;
+    bool fanMotor;
     bool fanBall;
 };
 
@@ -79,7 +79,7 @@ struct SensorFrame
     //Температура ДВС
     double dieselTemp;
     //Температура АД
-    double adTemp;
+    double motorTemp;
     //Температура балластных резисторов
     double resistorTemp;
     //Давление

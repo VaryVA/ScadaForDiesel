@@ -5,7 +5,7 @@
 #include <QFile>
 #include <QString>
 #include <QHash>
-#include "DataTypes.h"
+#include "backend/DataTypes.h"
 
 class ConfigData : public QObject
 {
