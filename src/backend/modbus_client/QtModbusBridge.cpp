@@ -104,10 +104,36 @@ void QtModbusBridge::onReadInfo()
 
 void QtModbusBridge::onWriteConfig(const ModelConfig& cmd)
 {
+    qDebug() << "[QtModbusBridge] Requesting sensors data";
 
+    m_dataUnit.setRegisterType(QModbusDataUnit::InputRegisters);
+    m_dataUnit.setStartAddress(0);
+    m_dataUnit.setValueCount(sizeof(m_cfg.input) / 2);
+
+    // Sending request to the device with specified Unit Id
+    auto *reply = m_client.sendReadRequest(m_dataUnit, m_cfg.unitId);
+
+    if (!reply)
+    {
+        return;
+    }
+
+    // Check if request failed immediately
+    if (reply->isFinished())
+    {
+        reply->deleteLater();
+        return;
+    }
+
+    // Handling reply with finished signal
+    QObject::connect(reply, &QModbusReply::finished, this, [this, reply]()
+    {
+        parseSensorsResponse(reply);
+        reply->deleteLater();
+    });
 }
 
-void QtModbusBridge::onWriteControl(const ModelControl& control)
+void QtModbusBridge::onWriteDecision(const Decision& decision)
 {
 
 }
@@ -131,11 +157,11 @@ void QtModbusBridge::parseSensorsResponse(QModbusReply* reply)
 
 void QtModbusBridge::requestSensors()
 {
-    qDebug() << "[QtModbusBridge] Requesting data";
+    qDebug() << "[QtModbusBridge] Requesting sensors data";
 
     m_dataUnit.setRegisterType(QModbusDataUnit::InputRegisters);
     m_dataUnit.setStartAddress(0);
-    m_dataUnit.setValueCount(sizeof(m_cfg.holding) / 2);
+    m_dataUnit.setValueCount(sizeof(m_cfg.input) / 2);
 
     // Sending request to the device with specified Unit Id
     auto *reply = m_client.sendReadRequest(m_dataUnit, m_cfg.unitId);
@@ -162,11 +188,48 @@ void QtModbusBridge::requestSensors()
 
 void QtModbusBridge::parseInfoResponse(QModbusReply* reply)
 {
+    if (reply->error() == QModbusDevice::NoError)
+    {
+        return;
+    }
 
+    const QModbusDataUnit result = reply->result();
+    const QVector<quint16> values = result.values();
+
+    qDebug() << "[QtModbusBridge] Read registers:" << values.size();
+    for (int i = 0; i < values.size(); ++i)
+    {
+        qDebug() << "[QtModbusBridge] Register #" << i << ":" << values[i];
+    }
 }
 
 void QtModbusBridge::requestInfo()
 {
     qDebug() << "[QtModbusBridge] Requesting model info";
 
+    m_dataUnit.setRegisterType(QModbusDataUnit::HoldingRegisters);
+    m_dataUnit.setStartAddress(0);
+    m_dataUnit.setValueCount(sizeof(m_cfg.holding) / 2);
+
+    // Sending request to the device with specified Unit Id
+    auto *reply = m_client.sendReadRequest(m_dataUnit, m_cfg.unitId);
+
+    if (!reply)
+    {
+        return;
+    }
+
+    // Check if request failed immediately
+    if (reply->isFinished())
+    {
+        reply->deleteLater();
+        return;
+    }
+
+    // Handling reply with finished signal
+    QObject::connect(reply, &QModbusReply::finished, this, [this, reply]()
+    {
+        parseInfoResponse(reply);
+        reply->deleteLater();
+    });
 }
