@@ -8,6 +8,7 @@
 // Control registers mapping, read/write, 1-bit
 struct CoilsRegistersScheme
 {
+    bool fanICE;
     bool fanMotor;
     bool fanBall;
 };
@@ -15,42 +16,72 @@ struct CoilsRegistersScheme
 // Device status registers mapping, only read, 1-bit
 struct DiscreteRegistersScheme
 {
-    bool fanMotor;
-    bool fanBall;
+    bool hasFault;
+    bool hasLimitViolations;
 };
 
 // Settings and variables registers mapping, read/write, 16-bit
 struct HoldingRegistersScheme
 {
-    //Максимальная температура ДВС
-    double maxDieselTemp;
-    //Максимальная температура АД
-    double maxMotorTemp;
-    //Максимальная температура балластных резисторов
-    double maxResistorTemp;
-    //Максимальное давление в ДВС
-    double maxDieselPressure;
-    //Минимальное давление в ДВС
+    // Максимально допустимая температура охлаждающей жидкости
+    double maxCoolantTemp;
+    // Минимально допустимое давление масла
     double minDieselPressure;
-    //Общая частота оборотов (можно расширить)
-    int maxRpm;
+    // Максимально допустимое давление масла
+    double maxDieselPressure;
+    // Максимально допустимая частота вращения ДВС в режиме притирки
+    int maxIceRpmPrir;
+    // Максимально допустимая частота вращения ДВС в режиме обкатки
+    int maxIceRpmRun;
+    // Максимально допустимая температура АД
+    double maxMotorTemp;
+    // Максимально допустимая температура балластных резисторов
+    double maxBallastTemp;
+    // Входная частота для АД / задание частоты АД
+    double motorFrequencyInput;
+    // Целевая механическая нагрузка / момент АД
+    double targetMotorTorque;
+    // Версия (ревизия) настроек holding-регистров
+    int holdingRevision;
+    // Команда на симуляцию
+    uint16_t simulationCommand;
+    // Запрос на симуляцию
+    uint16_t simulationRequest;
+    // Режим симуляции
+    uint16_t simulationMode;
 };
 
 // Sensor data registers mapping, only read, 16-bit
 struct InputRegistersScheme
 {
-    //Температура ДВС
-    double dieselTemp;
-    //Температура АД
+    // Температура охлаждающей жидкости
+    double coolantTemp;
+    // Давление масла
+    double oilPressure;
+    // Частота вращения ДВС в режиме притирки
+    int iceRpmPrir;
+    // Частота вращения ДВС в режиме обкатки
+    int iceRpmRun;
+    // Температура АД
     double motorTemp;
-    //Температура балластных резисторов
-    double resistorTemp;
-    //Давление
-    double dieselPressure;
-    //Момент
-    double torque;
-    //Частота вращения
-    double rpm;
+    // Температура балластных резисторов
+    double ballastTemp;
+    // Момент АД
+    double motorTorque;
+    // Частота АД
+    double motorFrequency;
+    // Ревизия входных данных / версия источника
+    int revision;
+    // Ревизия источника входных данных
+    int sourceInputRevision;
+    // Время модели
+    uint32_t modelTime;
+    // Временная метка регистра Input Registers
+    uint32_t inputRegistersTimestamp;
+    // Состояние Input Registers
+    uint16_t inputRegistersState;
+    // Код неисправности
+    uint16_t faultCode;
 };
 
 //Структра для задания конфигурации Modbus-клиента
