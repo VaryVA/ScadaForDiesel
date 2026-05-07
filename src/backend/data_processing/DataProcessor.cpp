@@ -63,14 +63,14 @@ void DataProcessor::processFrame(SensorFrame frame)
     // обороты
     if (isParamActiveOnStage("rpm", m_currentStage))
     {
-        if (frame.rpm >= m_config.maxRpm)
+        if (frame.rpm >= m_config.maxRpmPrir)
         {
             promote(2, DiagState::Alarm_RpmOverspeed,
                     QStringLiteral("Превышение оборотов: %1 >= %2")
                         .arg(frame.rpm)
-                        .arg(m_config.maxRpm));
+                        .arg(m_config.maxRpmPrir));
         }
-        else if (frame.rpm >= m_config.maxRpm * WARN_RATIO)
+        else if (frame.rpm >= m_config.maxRpmPrir * WARN_RATIO)
         {
             promote(1, DiagState::PreWarn_RpmHigh,
                     QStringLiteral("Обороты приближаются к пределу: %1")

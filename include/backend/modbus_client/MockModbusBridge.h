@@ -1,10 +1,7 @@
 #pragma once
 #include "IModbusBridge.h"
+#include "backend/DataTypes.h"
 #include <QTimer>
-
-class ModbusConfig;
-class ModelConfig;
-class Decision;
 
 class MockModbusBridge : public IModbusBridge
 {
@@ -18,9 +15,6 @@ public slots:
     void onReadInfo() override;
     void onWriteConfig(const ModelConfig& cmd) override;
     void onWriteDecision(const Decision& decision) override;
-private slots:
-    void requestSensors();
-    void requestInfo();
 private:
     ModbusConfig m_cfg;
     QTimer m_pollTimer;

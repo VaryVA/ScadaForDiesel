@@ -5,83 +5,91 @@
 #include <QString>
 #include <QVector>
 #include <QMetaType>
-// Control registers mapping, read/write, 1-bit
-struct CoilsRegistersScheme
+// InputRegisters offset (sensors data, only read operations)
+namespace InputRegisters
 {
-    bool fanICE;
-    bool fanMotor;
-    bool fanBall;
-};
-
-// Device status registers mapping, only read, 1-bit
-struct DiscreteRegistersScheme
-{
-    bool hasFault;
-    bool hasLimitViolations;
-};
-
-// Settings and variables registers mapping, read/write, 16-bit
-struct HoldingRegistersScheme
-{
-    // Максимально допустимая температура охлаждающей жидкости
-    double maxCoolantTemp;
-    // Минимально допустимое давление масла
-    double minDieselPressure;
-    // Максимально допустимое давление масла
-    double maxDieselPressure;
-    // Максимально допустимая частота вращения ДВС в режиме притирки
-    int maxIceRpmPrir;
-    // Максимально допустимая частота вращения ДВС в режиме обкатки
-    int maxIceRpmRun;
-    // Максимально допустимая температура АД
-    double maxMotorTemp;
-    // Максимально допустимая температура балластных резисторов
-    double maxBallastTemp;
-    // Входная частота для АД / задание частоты АД
-    double motorFrequencyInput;
-    // Целевая механическая нагрузка / момент АД
-    double targetMotorTorque;
-    // Версия (ревизия) настроек holding-регистров
-    int holdingRevision;
-    // Команда на симуляцию
-    uint16_t simulationCommand;
-    // Запрос на симуляцию
-    uint16_t simulationRequest;
-    // Режим симуляции
-    uint16_t simulationMode;
-};
-
-// Sensor data registers mapping, only read, 16-bit
-struct InputRegistersScheme
-{
+    static constexpr qsizetype size = 50;
+    static constexpr uint16_t count = 14;
     // Температура охлаждающей жидкости
-    double coolantTemp;
+    static constexpr uint16_t T_cool = 0;
     // Давление масла
-    double oilPressure;
+    static constexpr uint16_t P_oil = 4;
     // Частота вращения ДВС в режиме притирки
-    int iceRpmPrir;
+    static constexpr uint16_t omega_ICE_prir = 8;
     // Частота вращения ДВС в режиме обкатки
-    int iceRpmRun;
+    static constexpr uint16_t omega_ICE_run = 12;
     // Температура АД
-    double motorTemp;
+    static constexpr uint16_t T_AD = 16;
     // Температура балластных резисторов
-    double ballastTemp;
+    static constexpr uint16_t T_ballast = 20;
     // Момент АД
-    double motorTorque;
+    static constexpr uint16_t M_AD = 24;
     // Частота АД
-    double motorFrequency;
+    static constexpr uint16_t f_AD = 28;
     // Ревизия входных данных / версия источника
-    int revision;
+    static constexpr uint16_t revision = 32;
     // Ревизия источника входных данных
-    int sourceInputRevision;
+    static constexpr uint16_t sourceInputRevision = 36;
     // Время модели
-    uint32_t modelTime;
+    static constexpr uint16_t modelTime = 40;
     // Временная метка регистра Input Registers
-    uint32_t inputRegistersTimestamp;
+    static constexpr uint16_t timestamp_ir = 44;
     // Состояние Input Registers
-    uint16_t inputRegistersState;
+    static constexpr uint16_t state_ir = 48;
     // Код неисправности
-    uint16_t faultCode;
+    static constexpr uint16_t faultCode = 49;
+};
+
+// HoldingRegisters offset (settings and variables, read/write operations)
+namespace HoldingRegisters
+{
+    static constexpr qsizetype size = 43;
+    static constexpr uint16_t count = 13;
+    // Максимально допустимая температура охлаждающей жидкости
+    static constexpr uint16_t T_cool_max = 0;
+    // Минимально допустимое давление масла
+    static constexpr uint16_t P_oil_min = 4;
+    // Максимально допустимое давление масла
+    static constexpr uint16_t P_oil_max = 8;
+    // Максимально допустимая частота вращения ДВС в режиме притирки
+    static constexpr uint16_t omega_ICE_max_prir = 12;
+    // Максимально допустимая частота вращения ДВС в режиме обкатки
+    static constexpr uint16_t omega_ICE_max_run = 16;
+    // Максимально допустимая температура АД
+    static constexpr uint16_t T_AD_max = 20;
+    // Максимально допустимая температура балластных резисторов
+    static constexpr uint16_t T_ballast_max = 24;
+    // Входная частота для АД / задание частоты АД
+    static constexpr uint16_t f_AD_Input = 28;  
+    // Целевая механическая нагрузка / момент АД  
+    static constexpr uint16_t M_AD_target = 32;
+    // Версия (ревизия) настроек holding-регистров
+    static constexpr uint16_t revision_h = 36;
+    // Команда на симуляцию
+    static constexpr uint16_t simulationCommand = 40;
+    // Запрос на симуляцию
+    static constexpr uint16_t simulationRequest = 41;
+    // Режим симуляции
+    static constexpr uint16_t simulationMode = 42;
+};
+
+// Coils offset (control registers, read/write operations)
+namespace CoilsRegisters
+{
+    static constexpr qsizetype size = 3;
+    static constexpr uint16_t count = 3;
+    static constexpr uint16_t fan_ICE = 0;
+    static constexpr uint16_t fan_AD = 1;
+    static constexpr uint16_t fan_ballast = 2;
+};
+
+// Discrete Inputs offset (device status, only read operations)
+namespace DiscreteRegisters
+{
+    static constexpr qsizetype size = 2;
+    static constexpr uint16_t count = 2;
+    static constexpr uint16_t hasFault = 0;
+    static constexpr uint16_t hasLimitViolations = 1;
 };
 
 //Структра для задания конфигурации Modbus-клиента
@@ -95,11 +103,6 @@ struct ModbusConfig
     int timeoutMs = 1000;
     int retries = 3;
     int unitId = 1;  // we assume one modbus device, so unitId will be ignored
-    // Start address is 0 for each register type
-    CoilsRegistersScheme coils;
-    DiscreteRegistersScheme discrete;
-    InputRegistersScheme input;
-    HoldingRegistersScheme holding;
 };
 
 //Снимок датчиков
@@ -137,8 +140,10 @@ struct ModelConfig
     double maxDieselPressure;
     //Минимальное давление в ДВС
     double minDieselPressure;
-    //Общая частота оборотов (можно расширить)
-    int maxRpm;
+    //Общая частота оборотов в режиме притирки
+    int maxRpmPrir;
+    //Общая частота оборотов в режиме обкатки
+    int maxRpmRun;
 };
 Q_DECLARE_METATYPE(ModelConfig)
 
