@@ -1,127 +1,73 @@
-// #pragma once
+#ifndef DATASTORE_H
+#define DATASTORE_H
 
-// #include <string>
-// #include <optional>
+#include <string>
+#include <optional>
 
-// // Qt includes
-// #include <QObject>
-// #include <QString>
-// #include <QVector>
-// // #include <QDateTime>
+#include <QObject>
 
-// // #include "../DataTypes.h" // MeasurementRecord, EventRecord, Report
+#include "backend/DataTypes.h" // Data
 
-// // Low-level layer
-// class Connector
-// {
-// public:
-//     explicit Connector(std::string path); // : path_(std::move(path)) {}
-//     virtual ~Connector() noexcept = default;
+// Low-level layer
+class Connector
+{
+public:
+    Connector(std::string path, size_t record_size);
+    virtual ~Connector() noexcept = default;
 
-//     virtual int64_t write(const std::string &data) = 0;
-//     virtual std::optional<std::string> read(int64_t id) const = 0;
-//     virtual bool update(int64_t id, const std::string &data) = 0;
-//     virtual bool remove(int64_t id) = 0;
+    virtual int64_t write(const std::string &data) = 0;
+    virtual std::optional<std::string> read(int64_t id) const = 0;
+    virtual bool update(int64_t id, const std::string &data) = 0;
+    virtual bool remove(int64_t id) = 0;
 
-//     size_t size() const noexcept;
-//     const std::string &path() const noexcept { return path_; }
+    size_t getSize() const noexcept;
+    const std::string &getPath() const noexcept;
+    size_t getRecordSize() const noexcept;
 
-// private:
-//     std::string path_;
-//     size_t size_;
-// };
+protected:
+    void setSize(size_t size) noexcept;
 
-// class CSVConnector : public Connector
-// {
-// public:
-//     explicit CSVConnector(std::string path); // : Connector(std::move(path)) {}
-//     ~CSVConnector() noexcept override = default;
+private:
+    std::string path_;
+    size_t size_;
+    size_t record_size_;
+};
 
-//     int64_t write(const std::string &data) override;
-//     std::optional<std::string> read(int64_t id) const override;
-//     bool update(int64_t id, const std::string &data) override;
-//     bool remove(int64_t id) override;
-// };
+class FileConnector : public Connector
+{
+public:
+    FileConnector(std::string path, size_t record_size);
+    ~FileConnector() noexcept override = default;
 
-// // Qt layer
-// struct MeasurementRecord
-// {
-//     qint64 runId;
-//     int stage;
-//     qint64 timestampMs;
-//     double rpm, torque, dieselTemp, motorTemp, resistorTemp, dieselPressure;
-//     double throttle, brakeTorque;
-//     QString flags; // "OK", "WARNING" и т.п.
-// };
+    int64_t write(const std::string &data) override;
+    std::optional<std::string> read(int64_t id) const override;
+    bool update(int64_t id, const std::string &data) override;
+    bool remove(int64_t id) override;
+};
 
-// struct EventRecord
-// {
-//     qint64 runId, timestampMs;
-//     int stage;
-//     QString type; // "stage_change", "abort", "warning", "info"
-//     QString message;
-// };
+// Qt layer
+class DataStore : public QObject
+{
+    Q_OBJECT
 
-// struct Report
-// {
-//     qint64 runId;
-//     QString startTime, endTime;
-//     QString finalStatus; // "completed" или "aborted"
-//     QVector<StageSummary> stages;
-//     QVector<EventRecord> events;
-// };
+public:
+    DataStore(Connector *connector, QObject *parent = nullptr);
+    QVector<Data> readData(qint64 id) const; // В случае ошибок возвращает пустой вектор
+    QVector<Data> readAllData() const;       // В случае ошибок возвращает пустой вектор
 
-// enum class StreamType
-// {
-//     Measurement,
-//     Event
-// };
+public slots:
+    bool writeData(const Data &record);
 
-// inline uint qHash(StreamType key, uint seed = 0) noexcept
-// {
-//     return qHash(static_cast<int>(key), seed);
-// }
+private:
+    QString serializeData(const Data &record) const;
+    Data deserializeData(const QString &line) const;
 
-// struct StorageConnector
-// {
-//     Connector *connector;
-//     qint64 nextId = 1;
-//     bool headersWritten = false;
-// };
+    void ensureHeaders();
+    qint64 generateId() noexcept;
 
-// class DataStore : public QObject
-// {
-//     Q_OBJECT
+private:
+    Connector *connector_;
+    bool headersEnsured_;
+};
 
-// public:
-//     DataStore(Connector *measurementConnector, Connector *eventConnector, QObject *parent = nullptr);
-//     // В случае ошибки возвращаю пустые объекты?
-//     QVector<MeasurementRecord> readRecords(qint64 runId) const;
-//     QVector<EventRecord> readEvents(qint64 runId) const;
-//     Report buildReport(qint64 runId) const;
-
-// public slots:
-//     void writeRecord(const MeasurementRecord &record);
-//     void writeEvent(const EventRecord &event);
-
-// private:
-//     QString serializeMeasurement(const MeasurementRecord &record) const;
-//     QString serializeEvent(const EventRecord &event) const;
-
-//     MeasurementRecord deserializeMeasurement(const QString &line) const;
-//     EventRecord deserializeEvent(const QString &line) const;
-
-//     void ensureHeaders(StreamType type);
-//     qint64 generateId(StreamType type) noexcept;
-
-// private:
-//     QHash<StreamType, StorageConnector> connectors_;
-// };
-
-// // Выносить ли структуры в DataTypes?
-// // Нужно ли использовать исключения? (иначе работать с bool/константами, std::nullopt, возвращать пустые объекты?)
-// // Ситуации для обработки:
-// // 1) Чтение файла, которого нет по пути / пустого файла
-// // 2) Чтение/обновление/удаление по некорректному id
-// // Если файла нет и происходит запись, он будет создан
-// // Нужен ли QDateTime или работать через qint64?
+#endif // DATASTORE_H
