@@ -3,6 +3,9 @@
 #include <iostream>
 #include <iomanip>
 
+#include <QDebug>
+#include <QStringList>
+
 #include "backend/data_store/DataStore.h"
 // #include "DataStore.h"
 
