@@ -38,7 +38,7 @@ namespace InputRegisters
     static constexpr uint16_t state_ir = 48;
     // Код неисправности
     static constexpr uint16_t faultCode = 49;
-};
+}
 
 // HoldingRegisters offset (settings and variables, read/write operations)
 namespace HoldingRegisters
@@ -71,7 +71,7 @@ namespace HoldingRegisters
     static constexpr uint16_t simulationRequest = 41;
     // Режим симуляции
     static constexpr uint16_t simulationMode = 42;
-};
+}
 
 // Coils offset (control registers, read/write operations)
 namespace CoilsRegisters
@@ -81,7 +81,7 @@ namespace CoilsRegisters
     static constexpr uint16_t fan_ICE = 0;
     static constexpr uint16_t fan_AD = 1;
     static constexpr uint16_t fan_ballast = 2;
-};
+}
 
 // Discrete Inputs offset (device status, only read operations)
 namespace DiscreteRegisters
@@ -90,7 +90,7 @@ namespace DiscreteRegisters
     static constexpr uint16_t count = 2;
     static constexpr uint16_t hasFault = 0;
     static constexpr uint16_t hasLimitViolations = 1;
-};
+}
 
 //Структра для задания конфигурации Modbus-клиента
 struct ModbusConfig
@@ -108,17 +108,17 @@ struct ModbusConfig
 //Снимок датчиков
 struct SensorFrame
 {
-    //Температура ДВС
+    //Температура ДВС(температура охлаждающей жидкости)
     double dieselTemp;
     //Температура АД
     double motorTemp;
     //Температура балластных резисторов
     double resistorTemp;
-    //Давление
+    //Давление масла
     double dieselPressure;
-    //Момент
+    //Момент АД
     double torque;
-    //Частота
+    //Частота вращения ДВС
     double rpm;
     //Метка времени в UNIX-формате
     qint64 timestampMs;
@@ -130,15 +130,15 @@ Q_DECLARE_METATYPE(SensorFrame)
 // лимиты, передаются в конструктор DataProcessor и в IModbusBridge для записи в модель
 struct ModelConfig
 {
-    //Максимальная температура ДВС
+    //Максимальная температура ДВС(температура охлаждающей жидкости)
     double maxDieselTemp;
     //Максимальная температура АД
     double maxMotorTemp;
     //Максимальная температура балластных резисторов
     double maxResistorTemp;
-    //Максимальное давление в ДВС
+    //Максимальное давление масла в ДВС
     double maxDieselPressure;
-    //Минимальное давление в ДВС
+    //Минимальное давление масла в ДВС
     double minDieselPressure;
     //Общая частота оборотов в режиме притирки
     int maxRpmPrir;
@@ -189,12 +189,14 @@ enum class DiagState
 //Структра для управления моделью фронтом
 struct FrontControl
 {
-    //Этап эксперимента
-    DiagState state;
-    //Максимальная частота в зависимости от этапа(необязательный параметр на некоторых этапах - может быть не задан)
-    int maxFreq;
-    //Время выполнения этапа в минутах(необязательный параметр на некоторых этапах - может быть не задан)
-    unsigned int time;
+    //Время обкатки ДВС в режиме притирки(в минутах)
+    unsigned int timePrir;
+    //Время горячей обкатки ДВС(в минутах)
+    unsigned int timeHot;
+    //Время горячей обкатки ДВС с нагрузкой(в минутах)
+    unsigned int timeHotWithLoad;
+    //Структура для задания минимальных/максимальных значений в модели
+    ModelConfig config;
 };
 
 // вектор управляющих воздействий + диагностика

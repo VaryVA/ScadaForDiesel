@@ -1,7 +1,7 @@
-#include "../../../include/backend/state_machine/state_machine.h"
-#include "../../../include/backend/backend_worker/backendworker.h"
-#include "../../../include/backend/modbus_client/MockModbusBridge.h"
-#include "../../../include/backend/data_store/DataStore.h"
+#include "backend/state_machine/state_machine.h"
+#include "backend/backend_worker/backendworker.h"
+#include "backend/modbus_client/MockModbusBridge.h"
+#include "backend/data_store/DataStore.h"
 #include <QDateTime>
 
 StateMachine::StateMachine(BackendWorker* backendWorker, QObject* parent)
@@ -23,15 +23,27 @@ StateMachine::StateMachine(BackendWorker* backendWorker, QObject* parent)
 
     m_dataProcessor = new DataProcessor(ModelConfig{}, this);
 
+    //Коннекты для коммуникатора
     connect(backendWorker, &BackendWorker::SendedFrontControlToBackend,
             m_communicator, &BackendCommunicator::ReceivedFrontControl, Qt::QueuedConnection);
-    connect(backendWorker, &BackendWorker::SendedModelConfigToBackend,
-            m_communicator, &BackendCommunicator::ReceivedModelConfig, Qt::QueuedConnection);
+    connect(backendWorker, &BackendWorker::StartedEngine,
+            m_communicator, &BackendCommunicator::ReceivedStartEngine, Qt::QueuedConnection);
+    connect(backendWorker, &BackendWorker::StopedEngine,
+            m_communicator, &BackendCommunicator::ReceivedStopEngine, Qt::QueuedConnection);
+
+    connect(m_communicator, &BackendCommunicator::SendedSensorFrame,
+            backendWorker, &BackendWorker::ReceivedSensorFrame, Qt::QueuedConnection);
+    connect(m_communicator, &BackendCommunicator::SendedEmergencyStopInfo,
+            backendWorker, &BackendWorker::ReceivedEmergencyStopInfo, Qt::QueuedConnection);
+    connect(m_communicator, &BackendCommunicator::SendedFeedback,
+            backendWorker, &BackendWorker::ReceivedFeedback, Qt::QueuedConnection);
+    connect(m_communicator, &BackendCommunicator::SendedData,
+            backendWorker, &BackendWorker::ReceivedData, Qt::QueuedConnection);
+    connect(m_communicator, &BackendCommunicator::SendedWarnToFrontend,
+            backendWorker, &BackendWorker::ReceivedWarn, Qt::QueuedConnection);
 
     connect(m_communicator, &BackendCommunicator::ReceivedFrontControl,
             this, &StateMachine::onReceivedFrontControl);
-    connect(m_communicator, &BackendCommunicator::ReceivedModelConfig,
-            this, &StateMachine::onReceivedModelConfig);
 
     connect(m_modbusBridge, &IModbusBridge::sensorsDataReady,
             this, &StateMachine::onSensorsDataReady);
@@ -46,8 +58,8 @@ StateMachine::StateMachine(BackendWorker* backendWorker, QObject* parent)
     connect(m_modbusBridge, &IModbusBridge::connectionRestored,
             this, &StateMachine::onModbusConnectionRestored);
 
-    connect(m_dataProcessor, &DataProcessor::decisionReady,
-            this, &StateMachine::onDecisionReady);
+    // connect(m_dataProcessor, &DataProcessor::decisionReady,
+    //         this, &StateMachine::onDecisionReady);
 
     connect(m_pollTimer, &QTimer::timeout, this, &StateMachine::pollModbus);
 }
