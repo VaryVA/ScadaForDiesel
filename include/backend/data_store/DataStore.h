@@ -21,8 +21,8 @@ public:
     virtual bool remove(int64_t id) = 0;
 
     size_t getSize() const noexcept;
-    const std::string &getPath() const noexcept;
     size_t getRecordSize() const noexcept;
+    const std::string &getPath() const noexcept;
 
 protected:
     void setSize(size_t size) noexcept;
@@ -43,6 +43,19 @@ public:
     std::optional<std::string> read(int64_t id) const override;
     bool update(int64_t id, const std::string &data) override;
     bool remove(int64_t id) override;
+
+private:
+    static constexpr char RECORD_DELIMITER = '\n';
+
+    size_t getFullRecordSize() const noexcept;
+    bool isValidId(int64_t id) const noexcept;
+    std::streampos getOffset(int64_t id) const noexcept;
+    std::string normalizeRecord(const std::string &data) const;
+
+    bool seekRead(std::fstream &file, std::streampos offset) const;
+    bool seekWrite(std::fstream &file, std::streampos offset) const;
+    bool readRecord(std::fstream &file, std::streampos offset, std::string &buffer) const;
+    bool writeRecord(std::fstream &file, std::streampos offset, const std::string &data);
 };
 
 // Qt layer
