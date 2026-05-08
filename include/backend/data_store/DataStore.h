@@ -36,7 +36,7 @@ private:
 class FileConnector : public Connector
 {
 public:
-    FileConnector(std::string path, size_t record_size);
+    FileConnector(std::string path, size_t record_size); // Необходимо определить макрос для размера одной записи (128 байт хватит); #define RECORD_SIZE 128
     ~FileConnector() noexcept override = default;
 
     int64_t write(const std::string &data) override;
@@ -72,7 +72,7 @@ public slots:
     bool writeData(const Data &record);
 
 private:
-    QString serializeData(qint64 id, const Data &record) const;
+    QString serializeData(qint64 id, const Data &record, int precision = 3) const;
     bool deserializeData(const QString &line, Data &data) const;
 
     void ensureHeaders();

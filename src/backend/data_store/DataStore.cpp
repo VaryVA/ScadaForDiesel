@@ -370,20 +370,27 @@ DataStore::DataStore(Connector *connector, QObject *parent)
     ensureHeaders();
 }
 
-QString DataStore::serializeData(qint64 id, const Data &record) const
+QString DataStore::serializeData(qint64 id,
+                                 const Data &record,
+                                 int precision) const
 {
     const auto &frame = record.frame;
+
+    auto fmt = [precision](double value)
+    {
+        return QString::number(value, 'f', precision);
+    };
 
     QStringList parts;
     parts.reserve(10);
 
     parts << QString::number(id)
-          << QString::number(frame.dieselTemp, 'g', 17)
-          << QString::number(frame.motorTemp, 'g', 17)
-          << QString::number(frame.resistorTemp, 'g', 17)
-          << QString::number(frame.dieselPressure, 'g', 17)
-          << QString::number(frame.torque, 'g', 17)
-          << QString::number(frame.rpm, 'g', 17)
+          << fmt(frame.dieselTemp)
+          << fmt(frame.motorTemp)
+          << fmt(frame.resistorTemp)
+          << fmt(frame.dieselPressure)
+          << fmt(frame.torque)
+          << fmt(frame.rpm)
           << QString::number(frame.timestampMs)
           << QString::number(frame.stage)
           << diagStateToString(record.state);
