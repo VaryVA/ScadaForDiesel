@@ -2,13 +2,28 @@
 #include "backend/state_machine/state_machine.h"
 
 BackendWorker::BackendWorker(QObject* parent) :
-    m_machine(new StateMachine(this, parent)), m_machineThread(QThread(this)), QObject{parent}
+    m_machine(new StateMachine(this)), QObject{parent}
 {
     qRegisterMetaType<FrontControl>();
     qRegisterMetaType<ModelConfig>();
     qRegisterMetaType<SensorFrame>();
     connect(&m_machineThread, &QThread::started, m_machine, &StateMachine::start, Qt::QueuedConnection);
     connect(&m_machineThread, &QThread::finished, m_machine, &StateMachine::stop, Qt::QueuedConnection);
+}
+
+void BackendWorker::SendFrontControlToBackend(FrontControl& control)
+{
+    emit SendedFrontControlToBackend(control);
+}
+
+void BackendWorker::StartEngine()
+{
+    emit StartedEngine();
+}
+
+void BackendWorker::StopEngine()
+{
+    emit StopedEngine();
 }
 
 void BackendWorker::Run()
@@ -24,5 +39,8 @@ void BackendWorker::Stop()
 
 BackendWorker::~BackendWorker()
 {
+    if(m_machineThread.isRunning())
+        m_machineThread.quit();
+    m_machineThread.wait();
     m_machine->deleteLater();
 }

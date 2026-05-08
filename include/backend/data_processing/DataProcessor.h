@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <QString>
-#include "DataTypes.h"
+#include "backend/DataTypes.h"
 
 /**
  * Модуль обработки данных.

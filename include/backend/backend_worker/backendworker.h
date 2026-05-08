@@ -19,10 +19,12 @@ public:
     //Остановка бэкэнда
     void Stop();
 
-    //Метод для отправки команды на изменение состояния модели бэкэнду
+    //Метод для отправки параметров модели бэкэнду
     void SendFrontControlToBackend(FrontControl& control);
-    //Метод для отправки нового кофига модели бэкэнду
-    void SendModelConfigToBackend(ModelConfig& config);
+    //Запустить обкатку
+    void StartEngine();
+    //Остановить обкатку
+    void StopEngine();
 
 signals:
     //Сигналы для получения(для фронта)
@@ -31,13 +33,18 @@ signals:
     //Сигнал на приход информации об аварийной остановке
     void ReceivedEmergencyStopInfo();
     //Сигнал на приход фидбека на изменение этапа
-    void ReceivedFeedback(bool isComplete);
+    void ReceivedFeedback(DiagState state);
     //Сигнал на приход данных
     void ReceivedData(QVector<Data>& data);
+    //Сигнал на приход предупреждений в работе двигателя
+    void ReceivedWarn(DiagState state);
+    //Сигнал при окончании выполнения этапа обкатки
+    void ReceivedStageCompleteInfo();
 
     //Сигналы для отправки(внутренние)
     void SendedFrontControlToBackend(FrontControl control);
-    void SendedModelConfigToBackend(ModelConfig config);
+    void StartedEngine();
+    void StopedEngine();
 
 private:
     QThread m_machineThread;
