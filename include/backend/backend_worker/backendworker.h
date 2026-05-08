@@ -38,6 +38,8 @@ signals:
     void ReceivedData(QVector<Data>& data);
     //Сигнал на приход предупреждений в работе двигателя
     void ReceivedWarn(DiagState state);
+    //Сигнал при окончании выполнения этапа обкатки
+    void ReceivedStageCompleteInfo();
 
     //Сигналы для отправки(внутренние)
     void SendedFrontControlToBackend(FrontControl control);

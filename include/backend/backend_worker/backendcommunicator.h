@@ -20,6 +20,8 @@ public:
     void SendDataToFrontend(QVector<Data>& data);
     //Метод для отправки предупреждений фронту
     void SendWarnToFrontend(DiagState state);
+    //Метод для отправки сообщения о завершенном этапе
+    void SendStageCompleteInfoToFrontend();
 
 signals:
     //Сигналы для отправки(внутренние)
@@ -28,6 +30,7 @@ signals:
     void SendedFeedback(DiagState state);
     void SendedData(QVector<Data>& data);
     void SendedWarnToFrontend(DiagState state);
+    void SendedStageCompleteInfoToFrontend();
 
     //Сигналы для получения
     //Сигнал на приход запроса на изменения этапа эксперимента

@@ -27,3 +27,8 @@ void BackendCommunicator::SendWarnToFrontend(DiagState state)
 {
     emit SendedWarnToFrontend(state);
 }
+
+void BackendCommunicator::SendStageCompleteInfoToFrontend()
+{
+    emit SendedStageCompleteInfoToFrontend();
+}

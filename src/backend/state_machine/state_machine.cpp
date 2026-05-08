@@ -41,6 +41,8 @@ StateMachine::StateMachine(BackendWorker* backendWorker, QObject* parent)
             backendWorker, &BackendWorker::ReceivedData, Qt::QueuedConnection);
     connect(m_communicator, &BackendCommunicator::SendedWarnToFrontend,
             backendWorker, &BackendWorker::ReceivedWarn, Qt::QueuedConnection);
+    connect(m_communicator, &BackendCommunicator::SendedStageCompleteInfoToFrontend,
+            backendWorker, &BackendWorker::ReceivedStageCompleteInfo, Qt::QueuedConnection);
 
     connect(m_communicator, &BackendCommunicator::ReceivedFrontControl,
             this, &StateMachine::onReceivedFrontControl);
