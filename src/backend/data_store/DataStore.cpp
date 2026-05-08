@@ -370,13 +370,15 @@ DataStore::DataStore(Connector *connector, QObject *parent)
     ensureHeaders();
 }
 
-QString DataStore::serializeData(const Data &record) const
+QString DataStore::serializeData(qint64 id, const Data &record) const
 {
     const auto &frame = record.frame;
 
     QStringList parts;
-    parts.reserve(9);
-    parts << QString::number(frame.dieselTemp, 'g', 17)
+    parts.reserve(10);
+
+    parts << QString::number(id)
+          << QString::number(frame.dieselTemp, 'g', 17)
           << QString::number(frame.motorTemp, 'g', 17)
           << QString::number(frame.resistorTemp, 'g', 17)
           << QString::number(frame.dieselPressure, 'g', 17)
@@ -392,36 +394,48 @@ QString DataStore::serializeData(const Data &record) const
 bool DataStore::deserializeData(const QString &line, Data &data) const
 {
     const QStringList parts = line.trimmed().split(';', Qt::KeepEmptyParts);
-    if (parts.size() != 9)
+
+    if (parts.size() != 10)
     {
         qWarning().noquote()
-            << "[DataStore] Invalid record format. Expected 9 fields, got"
-            << parts.size() << "Line:" << line;
+            << "[DataStore] Invalid record format. Expected 10 fields, got"
+            << parts.size()
+            << "Line:" << line;
         return false;
     }
 
     bool ok = false;
 
-    data.frame.dieselTemp = parts.at(0).trimmed().toDouble(&ok);
+    // parts[0] = id (игнорируем)
+
+    data.frame.dieselTemp = parts.at(1).trimmed().toDouble(&ok);
     if (!ok) return false;
-    data.frame.motorTemp = parts.at(1).trimmed().toDouble(&ok);
+
+    data.frame.motorTemp = parts.at(2).trimmed().toDouble(&ok);
     if (!ok) return false;
-    data.frame.resistorTemp = parts.at(2).trimmed().toDouble(&ok);
+
+    data.frame.resistorTemp = parts.at(3).trimmed().toDouble(&ok);
     if (!ok) return false;
-    data.frame.dieselPressure = parts.at(3).trimmed().toDouble(&ok);
+
+    data.frame.dieselPressure = parts.at(4).trimmed().toDouble(&ok);
     if (!ok) return false;
-    data.frame.torque = parts.at(4).trimmed().toDouble(&ok);
+
+    data.frame.torque = parts.at(5).trimmed().toDouble(&ok);
     if (!ok) return false;
-    data.frame.rpm = parts.at(5).trimmed().toDouble(&ok);
+
+    data.frame.rpm = parts.at(6).trimmed().toDouble(&ok);
     if (!ok) return false;
-    data.frame.timestampMs = parts.at(6).trimmed().toLongLong(&ok);
+
+    data.frame.timestampMs = parts.at(7).trimmed().toLongLong(&ok);
     if (!ok) return false;
-    data.frame.stage = parts.at(7).trimmed().toInt(&ok);
+
+    data.frame.stage = parts.at(8).trimmed().toInt(&ok);
     if (!ok) return false;
-    if (!stringToDiagState(parts.at(8), data.state))
+
+    if (!stringToDiagState(parts.at(9), data.state))
     {
         qWarning().noquote()
-            << "[DataStore] Failed to parse diagnostic state:" << parts.at(8);
+            << "[DataStore] Failed to parse diagnostic state:" << parts.at(9);
         return false;
     }
 
@@ -446,16 +460,6 @@ void DataStore::ensureHeaders()
     headersEnsured_ = true;
 }
 
-qint64 DataStore::generateId() noexcept
-{
-    if (!connector_)
-    {
-        return -1;
-    }
-
-    return static_cast<qint64>(connector_->getSize());
-}
-
 bool DataStore::writeData(const Data &record)
 {
     if (!connector_)
@@ -466,22 +470,27 @@ bool DataStore::writeData(const Data &record)
 
     ensureHeaders();
 
-    const QString serialized = serializeData(record);
-    const QByteArray payload = serialized.toUtf8();
-    const size_t payloadSize = static_cast<size_t>(payload.size());
+    const qint64 id = generateId();
+    if (id < 0)
+    {
+        qWarning().noquote() << "[DataStore] writeData failed: unable to generate id.";
+        return false;
+    }
 
-    if (payloadSize > connector_->getRecordSize())
+    const QString serialized = serializeData(id, record);
+    const QByteArray payload = serialized.toUtf8();
+
+    if (static_cast<size_t>(payload.size()) > connector_->getRecordSize())
     {
         qWarning().noquote()
             << "[DataStore] Record is too large for FileConnector fixed record size."
-            << "Size:" << payloadSize
+            << "Size:" << payload.size()
             << "Limit:" << connector_->getRecordSize()
             << "Data:" << serialized;
         return false;
     }
 
-    const int64_t id = connector_->write(payload.toStdString());
-    if (id < 0)
+    if (connector_->write(payload.toStdString()) < 0)
     {
         qWarning().noquote() << "[DataStore] Failed to write record.";
         return false;
@@ -509,23 +518,18 @@ QVector<Data> DataStore::readData(qint64 id) const
     const std::optional<std::string> raw = connector_->read(id);
     if (!raw.has_value())
     {
-        qWarning().noquote() << "[DataStore] readData failed: unable to read record with id" << id;
-        return result;
-    }
-
-    const QString line = QString::fromStdString(*raw);
-    const QStringList parts = line.trimmed().split(';', Qt::KeepEmptyParts);
-    if (parts.size() != 9)
-    {
         qWarning().noquote()
-            << "[DataStore] readData failed: malformed record with id"
-            << id << "Fields:" << parts.size();
+            << "[DataStore] readData failed: unable to read record with id"
+            << id;
         return result;
     }
 
     Data data{};
-    if (!deserializeData(line, data))
+    if (!deserializeData(QString::fromStdString(*raw), data))
     {
+        qWarning().noquote()
+            << "[DataStore] readData failed: deserialize error for id"
+            << id;
         return result;
     }
 
@@ -548,27 +552,23 @@ QVector<Data> DataStore::readAllData() const
 
     for (size_t i = 0; i < size; ++i)
     {
-        const std::optional<std::string> raw = connector_->read(static_cast<int64_t>(i));
+        const std::optional<std::string> raw =
+            connector_->read(static_cast<int64_t>(i));
+
         if (!raw.has_value())
         {
-            qWarning().noquote() << "[DataStore] Skipping unreadable record with id" << static_cast<qint64>(i);
-            continue;
-        }
-
-        const QString line = QString::fromStdString(*raw);
-        const QStringList parts = line.trimmed().split(';', Qt::KeepEmptyParts);
-        if (parts.size() != 9)
-        {
             qWarning().noquote()
-                << "[DataStore] Skipping malformed record with id"
-                << static_cast<qint64>(i)
-                << "Fields:" << parts.size();
+                << "[DataStore] Skipping unreadable record with id"
+                << static_cast<qint64>(i);
             continue;
         }
 
         Data data{};
-        if (!deserializeData(line, data))
+        if (!deserializeData(QString::fromStdString(*raw), data))
         {
+            qWarning().noquote()
+                << "[DataStore] Skipping malformed record with id"
+                << static_cast<qint64>(i);
             continue;
         }
 

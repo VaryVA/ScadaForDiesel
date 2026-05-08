@@ -72,7 +72,7 @@ public slots:
     bool writeData(const Data &record);
 
 private:
-    QString serializeData(const Data &record) const;
+    QString serializeData(qint64 id, const Data &record) const;
     bool deserializeData(const QString &line, Data &data) const;
 
     void ensureHeaders();
