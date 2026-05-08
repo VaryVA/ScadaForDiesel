@@ -12,14 +12,8 @@ find_package(Qt6 REQUIRED COMPONENTS
     Core
     Network
     Test
+    SerialBus
 )
-
-# Modbus опционально
-find_package(Qt6 COMPONENTS Modbus QUIET)
-if(NOT Qt6Modbus_FOUND)
-    message(WARNING "Qt6 Modbus not found - QtModbusBridge will be excluded from build")
-    message(WARNING "Install: sudo apt install qt6-serial-dev (or equivalent)")
-endif()
 
 # Исходники
 set(BACKEND_SOURCES
@@ -29,13 +23,10 @@ set(BACKEND_SOURCES
     data_processing/DataProcessor.cpp
     data_store/DataStore.cpp
     modbus_client/IModbusBridge.cpp
+    modbus_client/QtModbusBridge.cpp
     modbus_client/MockModbusBridge.cpp
     state_machine/state_machine.cpp
 )
-
-if(Qt6Modbus_FOUND)
-    list(APPEND BACKEND_SOURCES modbus_client/QtModbusBridge.cpp)
-endif()
 
 # Заголовки
 set(BACKEND_HEADERS
@@ -46,12 +37,13 @@ set(BACKEND_HEADERS
     ${PROJECT_SOURCE_DIR}/include/backend/DataTypes.h
     ${PROJECT_SOURCE_DIR}/include/backend/config_data/config_data.h
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/IModbusBridge.h
+    ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/QtModbusBridge.h
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/MockModbusBridge.h
     ${PROJECT_SOURCE_DIR}/include/backend/state_machine/state_machine.h
 )
 
 # Библиотека
-add_library(backend_lib STATIC)
+add_library(backend_lib SHARED)
 
 target_sources(backend_lib
     PRIVATE
@@ -71,12 +63,8 @@ target_link_libraries(backend_lib
         Qt6::Core
         Qt6::Network
         Qt6::Test
+        Qt6::SerialBus
 )
-
-# Добавляем QtModbusBridge только если Modbus доступен
-if(Qt6Modbus_FOUND)
-    target_link_libraries(backend_lib PUBLIC Qt6::Modbus)
-endif()
 
 # Группировка файлов для QtCreator
 # Это убирает попадание хедеров в <Other Locations>
@@ -99,12 +87,9 @@ macro(add_backend_test TEST_NAME)
         Qt6::Core
         Qt6::Test
         Qt6::Network
+        Qt6::SerialBus
         backend_lib
     )
-
-    if(Qt6Modbus_FOUND)
-        target_link_libraries(${TEST_NAME} PRIVATE Qt6::Modbus)
-    endif()
 
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 endmacro()
@@ -139,11 +124,5 @@ add_backend_test(test_state_machine
 message(STATUS "Backend Library: backend_lib")
 message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "Qt6 Version: ${Qt6Core_VERSION}")
-
-if(Qt6Modbus_FOUND)
-    message(STATUS "Qt6 Modbus: FOUND (QtModbusBridge enabled)")
-else()
-    message(STATUS "Qt6 Modbus: NOT FOUND (using MockModbusBridge only)")
-endif()
 
 message(STATUS "Tests enabled")

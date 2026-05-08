@@ -5,34 +5,92 @@
 #include <QString>
 #include <QVector>
 #include <QMetaType>
-// Control registers mapping, read/write, 1-bit
-struct CoilsRegistersScheme
+// InputRegisters offset (sensors data, only read operations)
+namespace InputRegisters
 {
-    bool motorEnabled;
-};
+    static constexpr qsizetype size = 50;
+    static constexpr uint16_t count = 14;
+    // Температура охлаждающей жидкости
+    static constexpr uint16_t T_cool = 0;
+    // Давление масла
+    static constexpr uint16_t P_oil = 4;
+    // Частота вращения ДВС в режиме притирки
+    static constexpr uint16_t omega_ICE_prir = 8;
+    // Частота вращения ДВС в режиме обкатки
+    static constexpr uint16_t omega_ICE_run = 12;
+    // Температура АД
+    static constexpr uint16_t T_AD = 16;
+    // Температура балластных резисторов
+    static constexpr uint16_t T_ballast = 20;
+    // Момент АД
+    static constexpr uint16_t M_AD = 24;
+    // Частота АД
+    static constexpr uint16_t f_AD = 28;
+    // Ревизия входных данных / версия источника
+    static constexpr uint16_t revision = 32;
+    // Ревизия источника входных данных
+    static constexpr uint16_t sourceInputRevision = 36;
+    // Время модели
+    static constexpr uint16_t modelTime = 40;
+    // Временная метка регистра Input Registers
+    static constexpr uint16_t timestamp_ir = 44;
+    // Состояние Input Registers
+    static constexpr uint16_t state_ir = 48;
+    // Код неисправности
+    static constexpr uint16_t faultCode = 49;
+}
 
-// Device status registers mapping, only read, 1-bit
-struct DiscreteRegistersScheme
+// HoldingRegisters offset (settings and variables, read/write operations)
+namespace HoldingRegisters
 {
-    bool fanAd;
-    bool fanBall;
-};
+    static constexpr qsizetype size = 43;
+    static constexpr uint16_t count = 13;
+    // Максимально допустимая температура охлаждающей жидкости
+    static constexpr uint16_t T_cool_max = 0;
+    // Минимально допустимое давление масла
+    static constexpr uint16_t P_oil_min = 4;
+    // Максимально допустимое давление масла
+    static constexpr uint16_t P_oil_max = 8;
+    // Максимально допустимая частота вращения ДВС в режиме притирки
+    static constexpr uint16_t omega_ICE_max_prir = 12;
+    // Максимально допустимая частота вращения ДВС в режиме обкатки
+    static constexpr uint16_t omega_ICE_max_run = 16;
+    // Максимально допустимая температура АД
+    static constexpr uint16_t T_AD_max = 20;
+    // Максимально допустимая температура балластных резисторов
+    static constexpr uint16_t T_ballast_max = 24;
+    // Входная частота для АД / задание частоты АД
+    static constexpr uint16_t f_AD_Input = 28;  
+    // Целевая механическая нагрузка / момент АД  
+    static constexpr uint16_t M_AD_target = 32;
+    // Версия (ревизия) настроек holding-регистров
+    static constexpr uint16_t revision_h = 36;
+    // Команда на симуляцию
+    static constexpr uint16_t simulationCommand = 40;
+    // Запрос на симуляцию
+    static constexpr uint16_t simulationRequest = 41;
+    // Режим симуляции
+    static constexpr uint16_t simulationMode = 42;
+}
 
-// Settings and variables registers mapping, read/write, 16-bit
-struct HoldingRegistersScheme
+// Coils offset (control registers, read/write operations)
+namespace CoilsRegisters
 {
-    double targetRpm;
-    double throttlePosition;
-    double brakeTorque;
-};
+    static constexpr qsizetype size = 3;
+    static constexpr uint16_t count = 3;
+    static constexpr uint16_t fan_ICE = 0;
+    static constexpr uint16_t fan_AD = 1;
+    static constexpr uint16_t fan_ballast = 2;
+}
 
-// Sensor data registers mapping, only read, 16-bit
-struct InputRegistersScheme
+// Discrete Inputs offset (device status, only read operations)
+namespace DiscreteRegisters
 {
-    double rpm, torque;
-    double dieselTemp, motorTemp, resistorTemp, dieselPressure;
-    double throttle, brakeTorque;
-};
+    static constexpr qsizetype size = 2;
+    static constexpr uint16_t count = 2;
+    static constexpr uint16_t hasFault = 0;
+    static constexpr uint16_t hasLimitViolations = 1;
+}
 
 //Структра для задания конфигурации Modbus-клиента
 struct ModbusConfig
@@ -45,40 +103,51 @@ struct ModbusConfig
     int timeoutMs = 1000;
     int retries = 3;
     int unitId = 1;  // we assume one modbus device, so unitId will be ignored
-    // Start address is 0 for each register type
-    CoilsRegistersScheme coils;
-    DiscreteRegistersScheme discrete;
-    InputRegistersScheme input;
-    HoldingRegistersScheme holding;
 };
 
-// пакет измерений  то, что приходит от ModbusClient через StateMachine (все требует уточнения)
+//Снимок датчиков
 struct SensorFrame
 {
-    double dieselTemp;      //< температура ДВС
-    double motorTemp;       //< температура АД (асинхронного двигателя)
-    double resistorBalance; //< балансировочный резистор (?)
-    double dieselPressure;  //< давление ДВС
-    double torque;          //< момент
-    double rpm;             //< частота вращения
-    qint64 timestampMs;     //< метка времени
-    int stage;              //< № этапа
+    //Температура ДВС(температура охлаждающей жидкости)
+    double dieselTemp;
+    //Температура АД
+    double motorTemp;
+    //Температура балластных резисторов
+    double resistorTemp;
+    //Давление масла
+    double dieselPressure;
+    //Момент АД
+    double torque;
+    //Частота вращения ДВС
+    double rpm;
+    //Метка времени в UNIX-формате
+    qint64 timestampMs;
+    // Этап диагностики
+    int stage;
 };
 Q_DECLARE_METATYPE(SensorFrame)
 
-// лимиты, передаются в DataProcessor в конструкторе (тоже требует уточнения)
+// лимиты, передаются в конструктор DataProcessor и в IModbusBridge для записи в модель
 struct ModelConfig
 {
+    //Максимальная температура ДВС(температура охлаждающей жидкости)
     double maxDieselTemp;
+    //Максимальная температура АД
     double maxMotorTemp;
-    double maxResistorBalance;
+    //Максимальная температура балластных резисторов
+    double maxResistorTemp;
+    //Максимальное давление масла в ДВС
     double maxDieselPressure;
+    //Минимальное давление масла в ДВС
     double minDieselPressure;
-    double maxRpm; //< общий лимит оборотов (можно расширить)
+    //Общая частота оборотов в режиме притирки
+    int maxRpmPrir;
+    //Общая частота оборотов в режиме обкатки
+    int maxRpmRun;
 };
 Q_DECLARE_METATYPE(ModelConfig)
 
-// тип управляющего воздействия (и это требует уточнения)
+// тип управляющего воздействия (это требует уточнения)
 enum class ControlType
 {
     None,
@@ -120,12 +189,14 @@ enum class DiagState
 //Структра для управления моделью фронтом
 struct FrontControl
 {
-    //Этап эксперимента
-    DiagState state;
-    //Максимальная частота в зависимости от этапа(необязательный параметр на некоторых этапах - может быть не задан)
-    int maxFreq;
-    //Время выполнения этапа в минутах(необязательный параметр на некоторых этапах - может быть не задан)
-    unsigned int time;
+    //Время обкатки ДВС в режиме притирки(в минутах)
+    unsigned int timePrir;
+    //Время горячей обкатки ДВС(в минутах)
+    unsigned int timeHot;
+    //Время горячей обкатки ДВС с нагрузкой(в минутах)
+    unsigned int timeHotWithLoad;
+    //Структура для задания минимальных/максимальных значений в модели
+    ModelConfig config;
 };
 
 // вектор управляющих воздействий + диагностика

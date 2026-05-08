@@ -13,12 +13,22 @@ void BackendCommunicator::SendEmergencyStopInfoToFrontend()
     emit SendedEmergencyStopInfo();
 }
 
-void BackendCommunicator::SendFeedbackToFrontend(bool isComplete)
+void BackendCommunicator::SendFeedbackToFrontend(DiagState state)
 {
-    emit SendedFeedback(isComplete);
+    emit SendedFeedback(state);
 }
 
 void BackendCommunicator::SendDataToFrontend(QVector<Data>& data)
 {
     emit SendedData(data);
+}
+
+void BackendCommunicator::SendWarnToFrontend(DiagState state)
+{
+    emit SendedWarnToFrontend(state);
+}
+
+void BackendCommunicator::SendStageCompleteInfoToFrontend()
+{
+    emit SendedStageCompleteInfoToFrontend();
 }

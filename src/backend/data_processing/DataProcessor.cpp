@@ -1,5 +1,4 @@
 #include "backend/data_processing/DataProcessor.h"
-// этапы — должны совпадать с StateMachine (согласовать)
 namespace Stage
 {
     constexpr int IDLE = 0;
@@ -10,7 +9,6 @@ namespace Stage
     constexpr int COMPLETED = 5;
     constexpr int ABORTED = 6;
 }
-// доля от критического порога, при которой выдаём предаварийное состояние (тоже согласовать)
 static constexpr double WARN_RATIO = 0.9;
 DataProcessor::DataProcessor(const ModelConfig &config, QObject *parent)
     : QObject(parent), m_config(config)
@@ -29,28 +27,29 @@ void DataProcessor::reset()
     m_alarmLatched = false;
     m_currentStage = Stage::IDLE;
 }
-void DataProcessor::processFrame(SensorFrame frame)
+Decision DataProcessor::processFrame(const SensorFrame &frame)
 {
-    // после аварии решения больше не формируем
+    Decision decision;
+    // после аварии — пустое решение
     if (m_alarmLatched)
     {
-        return;
+        decision.state = DiagState::Alarm_Generic;
+        decision.reason = QStringLiteral("alarm latched");
+        return decision;
     }
-    // в неактивных режимах проверки нет
+    // неактивные режимы — проверки не выполняем
     if (m_currentStage == Stage::IDLE ||
         m_currentStage == Stage::COMPLETED ||
         m_currentStage == Stage::ABORTED)
     {
-        Decision d;
-        d.state = DiagState::Ok;
-        d.reason = QStringLiteral("inactive stage");
-        emit decisionReady(d);
-        return;
+        decision.state = DiagState::Ok;
+        decision.reason = QStringLiteral("inactive stage");
+        return decision;
     }
-    // будем выбирать наихудшее состояние (приоритет — авария)
+    // выбор наихудшего состояния (приоритет — авария)
     DiagState worstState = DiagState::Ok;
     QString worstReason;
-    int worstSeverity = 0; // 0 = ok, 1 = пред alarm, 2 = alarm
+    int worstSeverity = 0; // 0=ok, 1=пре alarm, 2=alarm
     auto promote = [&](int severity, DiagState st, const QString &rsn)
     {
         if (severity > worstSeverity)
@@ -63,18 +62,17 @@ void DataProcessor::processFrame(SensorFrame frame)
     // обороты
     if (isParamActiveOnStage("rpm", m_currentStage))
     {
-        if (frame.rpm >= m_config.maxRpm)
+        if (frame.rpm >= m_config.maxRpmPrir)
         {
             promote(2, DiagState::Alarm_RpmOverspeed,
                     QStringLiteral("Превышение оборотов: %1 >= %2")
                         .arg(frame.rpm)
-                        .arg(m_config.maxRpm));
+                        .arg(m_config.maxRpmPrir));
         }
-        else if (frame.rpm >= m_config.maxRpm * WARN_RATIO)
+        else if (frame.rpm >= m_config.maxRpmPrir * WARN_RATIO)
         {
             promote(1, DiagState::PreWarn_RpmHigh,
-                    QStringLiteral("Обороты приближаются к пределу: %1")
-                        .arg(frame.rpm));
+                    QStringLiteral("Обороты приближаются к пределу: %1").arg(frame.rpm));
         }
     }
     // температура ДВС
@@ -127,8 +125,7 @@ void DataProcessor::processFrame(SensorFrame frame)
         if (frame.dieselPressure >= m_config.maxDieselPressure)
         {
             promote(2, DiagState::Alarm_PressureOver,
-                    QStringLiteral("Превышение давления ДВС: %1")
-                        .arg(frame.dieselPressure));
+                    QStringLiteral("Превышение давления ДВС: %1").arg(frame.dieselPressure));
         }
         else if (frame.dieselPressure >= m_config.maxDieselPressure * WARN_RATIO)
         {
@@ -144,8 +141,7 @@ void DataProcessor::processFrame(SensorFrame frame)
         if (frame.dieselPressure <= m_config.minDieselPressure)
         {
             promote(2, DiagState::Alarm_PressureUnder,
-                    QStringLiteral("Падение давления ДВС: %1")
-                        .arg(frame.dieselPressure));
+                    QStringLiteral("Падение давления ДВС: %1").arg(frame.dieselPressure));
         }
         else if (frame.dieselPressure <= warnLow)
         {
@@ -154,34 +150,34 @@ void DataProcessor::processFrame(SensorFrame frame)
                         .arg(frame.dieselPressure));
         }
     }
-    Decision decision;
     decision.state = worstState;
     decision.reason = worstReason;
     if (worstSeverity == 2)
     {
-        // АВАРИЯ
+        // Авария
         m_alarmLatched = true;
         decision.controls = makeStopControls();
-        emit decisionReady(decision);
-        return;
+        return decision;
     }
     if (worstSeverity == 1)
     {
-        // предаварийное состояние — корректирующее воздействие
+        // Предаварийное состояние
         ModelControl mc;
         switch (worstState)
         {
         case DiagState::PreWarn_RpmHigh:
-            mc.type = ControlType::Throttle;
-            mc.value = 0.0; // прикрыть дроссель (значение согласовать)
+            // Снизить уставку дросселя (0…1).
+            mc.type = ControlType::ThrottleSetpoint;
+            mc.value = m_config.throttleReduceTo;
             decision.controls.append(mc);
             break;
         case DiagState::PreWarn_ResistorHigh:
-            mc.type = ControlType::BrakeTorque;
-            mc.value = 0.0; // снизить тормозной момент
+            // Снизить уставку тормозного момента АД (Н·м).
+            mc.type = ControlType::BrakeTorqueSetpoint;
+            mc.value = m_config.brakeReduceTo;
             decision.controls.append(mc);
             break;
-        // Перегревы и давление пока не доделаны
+        // Перегревы и давление сами
         case DiagState::PreWarn_DieselTempHigh:
         case DiagState::PreWarn_MotorTempHigh:
         case DiagState::PreWarn_PressureHigh:
@@ -190,7 +186,7 @@ void DataProcessor::processFrame(SensorFrame frame)
             break;
         }
     }
-    emit decisionReady(decision);
+    return decision;
 }
 bool DataProcessor::isParamActiveOnStage(const QString &param, int stage) const
 {
@@ -200,7 +196,6 @@ bool DataProcessor::isParamActiveOnStage(const QString &param, int stage) const
     {
         return false;
     }
-    // давление и температура ДВС — после запуска
     if (param == "dieselPressureMin" ||
         param == "dieselPressureMax" ||
         param == "dieselTemp")
@@ -209,22 +204,19 @@ bool DataProcessor::isParamActiveOnStage(const QString &param, int stage) const
                 stage == Stage::HOT_NO_LOAD ||
                 stage == Stage::HOT_WITH_LOAD);
     }
-    // балансировочный резистор — на этапе с нагрузкой
     if (param == "resistorBalance")
     {
         return (stage == Stage::HOT_WITH_LOAD);
     }
-
-    // rpm и motorTemp — на всех активных этапах.
+    // rpm и motorTemp — на всех активных этапах
     return true;
 }
 QVector<ModelControl> DataProcessor::makeStopControls()
 {
+    // Аварийный стоп
+    // Команды режима/опроса при аварии не отправляем
     QVector<ModelControl> v;
-    v.append({ControlType::EmergencyStop, 1.0});
-    v.append({ControlType::MotorEnable, 0.0});
-    v.append({ControlType::Throttle, 0.0});
-    v.append({ControlType::BrakeTorque, 0.0});
-    v.append({ControlType::TargetRpm, 0.0});
+    v.append({ControlType::ThrottleSetpoint, 0.0});
+    v.append({ControlType::BrakeTorqueSetpoint, 0.0});
     return v;
 }

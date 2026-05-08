@@ -7,7 +7,7 @@
 MockModbusBridge::MockModbusBridge(const ModbusConfig& cfg, QObject* parent) : IModbusBridge(cfg, parent)
 {
     m_cfg = cfg;
-    QObject::connect(&m_pollTimer, &QTimer::timeout, this, &MockModbusBridge::requestSensors);
+    QObject::connect(&m_pollTimer, &QTimer::timeout, this, &MockModbusBridge::onReadSensors);
     qInfo() << "[MockModbusBridge] Initialization is successfull";
     QThread::msleep(1000);
     qInfo() << "[MockModbusBridge] Connected to the Modbus Server";
@@ -27,14 +27,14 @@ void MockModbusBridge::stopPolling()
 
 void MockModbusBridge::onReadSensors()
 {
-    qInfo() << "[MockModbusBridge] Core is directly requesting to read sensor data";
-    requestSensors();
+    qInfo() << "[MockModbusBridge] Requesting data";
+    SensorFrame frame = { 1, 1, 1, 1, 1, 1, 1 };
+    emit sensorsDataReady(frame);
 }
 
 void MockModbusBridge::onReadInfo()
 {
-    qInfo() << "[MockModbusBridge] Core is directly requesting to read the model info";
-    requestInfo();
+    qInfo() << "[MockModbusBridge] Requesting model info";
 }
 
 void MockModbusBridge::onWriteConfig(const ModelConfig& cmd)
@@ -42,14 +42,7 @@ void MockModbusBridge::onWriteConfig(const ModelConfig& cmd)
     qInfo() << "[MockModbusBridge] Writing a new configuration to the model";
 }
 
-void MockModbusBridge::requestSensors()
+void MockModbusBridge::onWriteDecision(const Decision& decision)
 {
-    qInfo() << "[MockModbusBridge] Requesting data";
-    SensorFrame frame = { 1, 1, 1, 1, 1, 1, 1, 1 };
-    emit sensorsDataReady(frame);
-}
-
-void MockModbusBridge::requestInfo()
-{
-    qInfo() << "[MockModbusBridge] Requesting model info";
+    qInfo() << "[MockModbusBridge] Sending a decision to the model";
 }
