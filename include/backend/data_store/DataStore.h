@@ -73,7 +73,7 @@ public slots:
 
 private:
     QString serializeData(const Data &record) const;
-    Data deserializeData(const QString &line) const;
+    bool deserializeData(const QString &line, Data &data) const;
 
     void ensureHeaders();
     qint64 generateId() noexcept;

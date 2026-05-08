@@ -6,6 +6,7 @@
 #include "backend/data_store/DataStore.h"
 // #include "DataStore.h"
 
+// Low-level layer
 // === Connector ===
 Connector::Connector(std::string path, size_t record_size) : path_(std::move(path)), size_(0), record_size_(record_size) {}
 
@@ -241,7 +242,6 @@ std::optional<std::string> FileConnector::read(int64_t id) const
 }
 
 // === Update ===
-
 bool FileConnector::update(int64_t id, const std::string &data)
 {
     if (!isValidId(id))
@@ -329,6 +329,250 @@ bool FileConnector::remove(int64_t id)
 void printRecord(FileConnector &connector, int64_t id)
 {
     auto record = connector.read(id);
+}
+
+// === DataStore (Qt layer) ===
+namespace
+{
+QString diagStateToString(DiagState state)
+{
+    return QString::number(static_cast<int>(state));
+}
+
+bool stringToDiagState(const QString &value, DiagState &state)
+{
+    bool ok = false;
+    const int raw = value.trimmed().toInt(&ok);
+    if (!ok)
+    {
+        return false;
+    }
+
+    state = static_cast<DiagState>(raw);
+    return true;
+}
+} // namespace
+
+DataStore::DataStore(Connector *connector, QObject *parent)
+    : QObject(parent)
+    , connector_(connector)
+    , headersEnsured_(false)
+{
+    if (!connector_)
+    {
+        qWarning().noquote() << "[DataStore] Null connector passed to constructor.";
+        return;
+    }
+
+    ensureHeaders();
+}
+
+QString DataStore::serializeData(const Data &record) const
+{
+    const auto &frame = record.frame;
+
+    QStringList parts;
+    parts.reserve(9);
+    parts << QString::number(frame.dieselTemp, 'g', 17)
+          << QString::number(frame.motorTemp, 'g', 17)
+          << QString::number(frame.resistorTemp, 'g', 17)
+          << QString::number(frame.dieselPressure, 'g', 17)
+          << QString::number(frame.torque, 'g', 17)
+          << QString::number(frame.rpm, 'g', 17)
+          << QString::number(frame.timestampMs)
+          << QString::number(frame.stage)
+          << diagStateToString(record.state);
+
+    return parts.join(';');
+}
+
+bool DataStore::deserializeData(const QString &line, Data &data) const
+{
+    const QStringList parts = line.trimmed().split(';', Qt::KeepEmptyParts);
+    if (parts.size() != 9)
+    {
+        qWarning().noquote()
+            << "[DataStore] Invalid record format. Expected 9 fields, got"
+            << parts.size() << "Line:" << line;
+        return false;
+    }
+
+    bool ok = false;
+
+    data.frame.dieselTemp = parts.at(0).trimmed().toDouble(&ok);
+    if (!ok) return false;
+    data.frame.motorTemp = parts.at(1).trimmed().toDouble(&ok);
+    if (!ok) return false;
+    data.frame.resistorTemp = parts.at(2).trimmed().toDouble(&ok);
+    if (!ok) return false;
+    data.frame.dieselPressure = parts.at(3).trimmed().toDouble(&ok);
+    if (!ok) return false;
+    data.frame.torque = parts.at(4).trimmed().toDouble(&ok);
+    if (!ok) return false;
+    data.frame.rpm = parts.at(5).trimmed().toDouble(&ok);
+    if (!ok) return false;
+    data.frame.timestampMs = parts.at(6).trimmed().toLongLong(&ok);
+    if (!ok) return false;
+    data.frame.stage = parts.at(7).trimmed().toInt(&ok);
+    if (!ok) return false;
+    if (!stringToDiagState(parts.at(8), data.state))
+    {
+        qWarning().noquote()
+            << "[DataStore] Failed to parse diagnostic state:" << parts.at(8);
+        return false;
+    }
+
+    return true;
+}
+
+void DataStore::ensureHeaders()
+{
+    if (headersEnsured_)
+    {
+        return;
+    }
+
+    if (!connector_)
+    {
+        qWarning().noquote() << "[DataStore] Cannot ensure headers: connector is null.";
+        return;
+    }
+
+    // Формат хранения здесь без отдельной строки заголовков;
+    // метод оставлен как точка расширения и для совместимости с интерфейсом.
+    headersEnsured_ = true;
+}
+
+qint64 DataStore::generateId() noexcept
+{
+    if (!connector_)
+    {
+        return -1;
+    }
+
+    return static_cast<qint64>(connector_->getSize());
+}
+
+bool DataStore::writeData(const Data &record)
+{
+    if (!connector_)
+    {
+        qWarning().noquote() << "[DataStore] writeData failed: connector is null.";
+        return false;
+    }
+
+    ensureHeaders();
+
+    const QString serialized = serializeData(record);
+    const QByteArray payload = serialized.toUtf8();
+    const size_t payloadSize = static_cast<size_t>(payload.size());
+
+    if (payloadSize > connector_->getRecordSize())
+    {
+        qWarning().noquote()
+            << "[DataStore] Record is too large for FileConnector fixed record size."
+            << "Size:" << payloadSize
+            << "Limit:" << connector_->getRecordSize()
+            << "Data:" << serialized;
+        return false;
+    }
+
+    const int64_t id = connector_->write(payload.toStdString());
+    if (id < 0)
+    {
+        qWarning().noquote() << "[DataStore] Failed to write record.";
+        return false;
+    }
+
+    return true;
+}
+
+QVector<Data> DataStore::readData(qint64 id) const
+{
+    QVector<Data> result;
+
+    if (!connector_)
+    {
+        qWarning().noquote() << "[DataStore] readData failed: connector is null.";
+        return result;
+    }
+
+    if (id < 0 || static_cast<size_t>(id) >= connector_->getSize())
+    {
+        qWarning().noquote() << "[DataStore] readData failed: invalid id:" << id;
+        return result;
+    }
+
+    const std::optional<std::string> raw = connector_->read(id);
+    if (!raw.has_value())
+    {
+        qWarning().noquote() << "[DataStore] readData failed: unable to read record with id" << id;
+        return result;
+    }
+
+    const QString line = QString::fromStdString(*raw);
+    const QStringList parts = line.trimmed().split(';', Qt::KeepEmptyParts);
+    if (parts.size() != 9)
+    {
+        qWarning().noquote()
+            << "[DataStore] readData failed: malformed record with id"
+            << id << "Fields:" << parts.size();
+        return result;
+    }
+
+    Data data{};
+    if (!deserializeData(line, data))
+    {
+        return result;
+    }
+
+    result.append(data);
+    return result;
+}
+
+QVector<Data> DataStore::readAllData() const
+{
+    QVector<Data> result;
+
+    if (!connector_)
+    {
+        qWarning().noquote() << "[DataStore] readAllData failed: connector is null.";
+        return result;
+    }
+
+    const size_t size = connector_->getSize();
+    result.reserve(static_cast<qsizetype>(size));
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        const std::optional<std::string> raw = connector_->read(static_cast<int64_t>(i));
+        if (!raw.has_value())
+        {
+            qWarning().noquote() << "[DataStore] Skipping unreadable record with id" << static_cast<qint64>(i);
+            continue;
+        }
+
+        const QString line = QString::fromStdString(*raw);
+        const QStringList parts = line.trimmed().split(';', Qt::KeepEmptyParts);
+        if (parts.size() != 9)
+        {
+            qWarning().noquote()
+                << "[DataStore] Skipping malformed record with id"
+                << static_cast<qint64>(i)
+                << "Fields:" << parts.size();
+            continue;
+        }
+
+        Data data{};
+        if (!deserializeData(line, data))
+        {
+            continue;
+        }
+
+        result.append(data);
+    }
+
+    return result;
 }
 
 // int main()
