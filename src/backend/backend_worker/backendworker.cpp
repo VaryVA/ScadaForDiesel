@@ -2,7 +2,7 @@
 #include "backend/state_machine/state_machine.h"
 
 BackendWorker::BackendWorker(QObject* parent) :
-    m_machine(new StateMachine(this)), QObject{parent}
+    m_machine(new StateMachine(this, nullptr)), QObject{parent}
 {
     qRegisterMetaType<FrontControl>();
     qRegisterMetaType<ModelConfig>();

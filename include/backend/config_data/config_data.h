@@ -21,7 +21,7 @@ private:
     const QString m_RETRIES = "retries";
     const QString m_UNIT_ID = "unit_id";
 
-    const QString m_FILENAME = "config.txt";
+    const QString m_FILENAME = "configBackend.txt";
 };
 
 

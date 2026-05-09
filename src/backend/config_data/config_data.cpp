@@ -11,7 +11,7 @@ ModbusConfig ConfigData::LoadConfig()
         return ModbusConfig();
     }
 
-    if(!file.open(QIODevice::ReadOnly | QIODevice::Text));
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
         qInfo("Файл конфигурации защищен от чтения. Будут загружены параметры по умолчанию");
         return ModbusConfig();
@@ -21,36 +21,38 @@ ModbusConfig ConfigData::LoadConfig()
     while(!file.atEnd())
     {
         QString line = file.readLine();
+        line.chop(1);
         QStringList partLine = line.split('=');
         if(partLine.count() != 2)
             continue;
+        QString& key = partLine[0];
         QString& value = partLine[1];
-        if(m_HOST == value)
+        if(m_HOST == key)
         {
             config.host = value;
             continue;
         }
-        if(m_PORT == value)
+        if(m_PORT == key)
         {
             config.port = value.toUInt();
             continue;
         }
-        if(m_POLL_FREQ == value)
+        if(m_POLL_FREQ == key)
         {
             config.pollFrequencyMs = value.toInt();
             continue;
         }
-        if(m_TIMEOUT == value)
+        if(m_TIMEOUT == key)
         {
             config.timeoutMs = value.toInt();
             continue;
         }
-        if(m_RETRIES == value)
+        if(m_RETRIES == key)
         {
             config.retries = value.toInt();
             continue;
         }
-        if(m_UNIT_ID == value)
+        if(m_UNIT_ID == key)
             config.unitId = value.toInt();
     }
 
