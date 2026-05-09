@@ -7,14 +7,21 @@
 
 /**
  * Модуль обработки данных.
- *
- * Принимает SensorFrame от StateMachine, сравнивает с порогами из ModelConfig
- * с учётом текущего этапа и ВОЗВРАЩАЕТ Decision (вектор управляющих воздействий
- * + диагностическое состояние модели + причина).
- * версия 3
+ * версия 4
+ * Принимает SensorFrame, сравнивает с порогами из ModelConfig (с учётом этапа),
+ * формирует Decision: вектор управляющих воздействий + DiagState + reason.
  *
  *
- *
+ *    используем только существующие ControlType
+ *     (Throttle, BrakeTorque, TargetRpm, MotorEnable, EmergencyStop).
+ *     Вентиляторы охлаждения управляются через MotorEnable/коды режимов
+ *     не могут — поэтому при перегревах формируем только DiagState
+ *     и текстовую причину; включением вентиляторов будет заниматься тот,
+ *     кто реализует applyControls (в Modbus у нас есть CoilsRegisters::fan_*).
+ *   - дублируем выдачу Decision двумя путями:
+ *       1) processFrame возвращает Decision (если кто-то захочет использовать);
+ *       2) сигнал decisionReady(Decision)
+ *          закомментированный connect в state_machine.cpp.
  */
 class DataProcessor : public QObject
 {
@@ -23,17 +30,15 @@ public:
     explicit DataProcessor(const ModelConfig &config, QObject *parent = nullptr);
     Decision processFrame(const SensorFrame &frame);
 public slots:
-    // уведомление об актуальном этапе (для исключения ложных срабатываний)
     void onStageChanged(int newStage);
-    // обновление конфигурации (порогов)
     void onConfigChanged(ModelConfig config);
-    // сброс защёлки аварии и внутреннего состояния (новый прогон)
     void reset();
 
+signals:
+    void decisionReady(const Decision &decision);
+
 private:
-    // активна ли проверка параметра на текущем этапе???
     bool isParamActiveOnStage(const QString &param, int stage) const;
-    // аварийная команда останова
     static QVector<ModelControl> makeStopControls();
 
 private:
@@ -41,4 +46,5 @@ private:
     int m_currentStage = 0;
     bool m_alarmLatched = false;
 };
+
 #endif // DATAPROCESSOR_H
