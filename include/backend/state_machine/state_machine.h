@@ -15,7 +15,7 @@ class BackendWorker;
 class IModbusBridge;
 class DataStore;
 class DataProcessor;
-class CSVConnector;
+class FileConnector;
 
 class StateMachine : public QObject
 {
@@ -50,7 +50,7 @@ private slots:
     void onModbusConnectionRestored();
 
     // Команды фронта
-    void onReceivedFrontControl(const FrontControl& control);
+    void onReceivedFrontControl(const ModelControl& control);
     void onReceivedModelConfig(const ModelConfig& config);
 
 private:
@@ -65,9 +65,8 @@ private:
     DataStore*       m_dataStore;
     DataProcessor*   m_dataProcessor;
 
-    // Хранилища низкого уровня
-    CSVConnector* m_measurementConnector;
-    CSVConnector* m_eventConnector;
+    //Коннектор
+    FileConnector* m_Connector;
 
     // Таймеры
     QTimer* m_pollTimer;

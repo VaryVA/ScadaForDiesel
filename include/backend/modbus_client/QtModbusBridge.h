@@ -1,6 +1,7 @@
 #pragma once
 #include "IModbusBridge.h"
 #include "backend/DataTypes.h"
+#include "backend/modbus_client/RegisterConverter.h"
 #include <QTimer>
 #include <QModbusDataUnit>
 #include <QModbusTcpClient>
@@ -22,14 +23,14 @@ private slots:
     void onStateChange(QModbusDevice::State state);
     void onErrorOccured();
 private:
-    QModbusReply* sendReadRequest(const QModbusDataUnit& dataUnit);
-    QModbusReply* sendWriteRequest(const QModbusDataUnit& dataUnit);
     void parseSensorsResponse(const QVector<quint16>& values);
     void parseInfoResponse(const QVector<quint16>& values);
     std::optional<QVector<quint16>> extractValues(QModbusReply* reply, qsizetype expectedSize);
+    void setRegisterValues(QModbusDataUnit& dataUnit, qsizetype startAddress, const QList<quint16>& values);
 private:
     ModbusConfig m_cfg;
     QModbusTcpClient m_client;
     QTimer m_pollTimer;
+    RegisterConverter m_decoder;
     QModbusDevice::State m_prevState = QModbusDevice::UnconnectedState;
 };

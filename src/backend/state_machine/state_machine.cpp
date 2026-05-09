@@ -15,11 +15,10 @@ StateMachine::StateMachine(BackendWorker* backendWorker, QObject* parent)
 
     // ----- Подготавливаем CSV-коннекторы для хранилища -----
     // пути можно вынести в настройки, здесь для примера
-    m_measurementConnector = new CSVConnector("measurements.csv");
-    m_eventConnector       = new CSVConnector("events.csv");
+    m_Connector = new FileConnector("measurements.csv", SIZE_FILE_STR);
 
     // ----- Создаём DataStore -----
-    m_dataStore = new DataStore(m_measurementConnector, m_eventConnector, this);
+    m_dataStore = new DataStore(m_Connector, this);
 
     m_dataProcessor = new DataProcessor(ModelConfig{}, this);
 
@@ -78,13 +77,11 @@ void StateMachine::start()
     int pollMs = ConfigData().LoadConfig().pollFrequencyMs;
     m_pollTimer->start(pollMs);
 
-    EventRecord startEvt;
-    startEvt.runId = m_currentRunId;
-    startEvt.timestampMs = QDateTime::currentMSecsSinceEpoch();
-    startEvt.stage = -1;
-    startEvt.type = "start";
-    startEvt.message = "Experiment started";
-    m_dataStore->writeEvent(startEvt);
+    Data startEvt;
+    startEvt.frame.timestampMs = QDateTime::currentMSecsSinceEpoch();
+    startEvt.frame.stage = -1;
+    startEvt.state = DiagState::Ok;
+    m_dataStore->writeData(startEvt);
 
     transitionTo(DiagState::Ok);
     m_currentStageIndex = 0;
@@ -97,13 +94,10 @@ void StateMachine::stop()
     m_stageTimer->stop();
     m_modbusBridge->stopPolling();
 
-    EventRecord stopEvt;
-    stopEvt.runId = m_currentRunId;
-    stopEvt.timestampMs = QDateTime::currentMSecsSinceEpoch();
-    stopEvt.stage = m_currentStageIndex;
-    stopEvt.type = "stop";
-    stopEvt.message = "Experiment stopped";
-    m_dataStore->writeEvent(stopEvt);
+    Data stopEvt;
+    stopEvt.frame.timestampMs = QDateTime::currentMSecsSinceEpoch();
+    stopEvt.frame.stage = m_currentStageIndex;
+    m_dataStore->writeData(stopEvt);
 
     transitionTo(DiagState::IDLE);
     emit finished(m_state);
@@ -132,30 +126,24 @@ void StateMachine::onSensorsDataReady(const SensorFrame& frame)
 void StateMachine::onDecisionReady(const Decision& decision)
 {
     // Запись в хранилище
-    MeasurementRecord rec;
-    rec.runId = m_currentRunId;
-    rec.stage = m_currentSensorFrame.stage;
-    rec.timestampMs = m_currentSensorFrame.timestampMs;
-    rec.rpm = m_currentSensorFrame.rpm;
-    rec.torque = m_currentSensorFrame.torque;
-    rec.dieselTemp = m_currentSensorFrame.dieselTemp;
-    rec.motorTemp = m_currentSensorFrame.motorTemp;
-    rec.resistorTemp = 0;                    // маппинг уточнить
-    rec.dieselPressure = m_currentSensorFrame.dieselPressure;
-    rec.throttle = 0;                        // дополнить при необходимости
-    rec.brakeTorque = 0;
-    rec.flags = (decision.state == DiagState::Ok) ? "OK" : "WARNING";
-    m_dataStore->writeRecord(rec);
+    Data rec;
+    rec.frame.stage = m_currentSensorFrame.stage;
+    rec.frame.timestampMs = m_currentSensorFrame.timestampMs;
+    rec.frame.rpm = m_currentSensorFrame.rpm;
+    rec.frame.torque = m_currentSensorFrame.torque;
+    rec.frame.dieselTemp = m_currentSensorFrame.dieselTemp;
+    rec.frame.motorTemp = m_currentSensorFrame.motorTemp;
+    rec.frame.resistorTemp = 0;                    // маппинг уточнить
+    rec.frame.dieselPressure = m_currentSensorFrame.dieselPressure;
+    m_dataStore->writeData(rec);
 
     // Обработка смены состояния
     if (decision.state != m_state) {
-        EventRecord evt;
-        evt.runId = m_currentRunId;
-        evt.timestampMs = QDateTime::currentMSecsSinceEpoch();
-        evt.stage = m_currentStageIndex;
-        evt.type = "transition";
-        evt.message = QString("State changed to %1").arg(static_cast<int>(decision.state));
-        m_dataStore->writeEvent(evt);
+        Data evt;
+        evt.frame.timestampMs = QDateTime::currentMSecsSinceEpoch();
+        evt.frame.stage = m_currentStageIndex;
+        evt.state = DiagState::Ok;
+        m_dataStore->writeData(evt);
 
         applyControls(decision.controls);
         transitionTo(decision.state);
@@ -175,13 +163,13 @@ void StateMachine::onDecisionReady(const Decision& decision)
     m_communicator->SendDataToFrontend(dataVec);
 
     // Обратная связь: считается успешным, если состояние не аварийное
-    bool ok = (decision.state == DiagState::Ok || decision.state == DiagState::PreWarn_RpmHigh /* и т.п.*/);
-    m_communicator->SendFeedbackToFrontend(ok);
+    //bool ok = (decision.state == DiagState::Ok || decision.state == DiagState::PreWarn_RpmHigh /* и т.п.*/);
+    m_communicator->SendFeedbackToFrontend(decision.state);
 }
 
-void StateMachine::onReceivedFrontControl(const FrontControl& control)
+void StateMachine::onReceivedFrontControl(const ModelControl& control)
 {
-    if (control.state == DiagState::Alarm_Generic) {
+    if (control.type == ControlType::EmergencyStop) {
         requestAbort("Front control emergency stop");
     }
     // другая логика
@@ -207,13 +195,11 @@ void StateMachine::applyControls(const QVector<ModelControl>& controls) {
 // ---------- Ошибки Modbus ----------
 void StateMachine::onModbusConfigurationError(const QString& reason) {
     // Логируем причину в хранилище
-    EventRecord evt;
-    evt.runId = m_currentRunId;
-    evt.timestampMs = QDateTime::currentMSecsSinceEpoch();
-    evt.stage = m_currentStageIndex;
-    evt.type = "error";
-    evt.message = "Modbus config error: " + reason;
-    m_dataStore->writeEvent(evt);
+    Data evt;
+    evt.frame.timestampMs = QDateTime::currentMSecsSinceEpoch();
+    evt.frame.stage = m_currentStageIndex;
+    evt.state = DiagState::Alarm_Generic;
+    m_dataStore->writeData(evt);
     m_communicator->SendEmergencyStopInfoToFrontend();
 }
 

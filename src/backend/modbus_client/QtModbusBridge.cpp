@@ -100,13 +100,10 @@ void QtModbusBridge::onReadSensors()
 {
     qDebug() << "[QtModbusBridge] Requesting sensors data";
 
-    QModbusDataUnit dataUnit;
-    dataUnit.setRegisterType(QModbusDataUnit::InputRegisters);
-    dataUnit.setStartAddress(0);
-    dataUnit.setValueCount(InputRegisters::count);
+    QModbusDataUnit dataUnit(QModbusDataUnit::InputRegisters, 0, InputRegisters::count);
 
     // Sending request to the device with specified Unit Id
-    auto* reply = sendReadRequest(dataUnit);
+    auto* reply = m_client.sendReadRequest(dataUnit, m_cfg.unitId);
     if (!reply)
         return;
 
@@ -125,13 +122,10 @@ void QtModbusBridge::onReadInfo()
 {
     qDebug() << "[QtModbusBridge] Requesting model info";
 
-    QModbusDataUnit dataUnit;
-    dataUnit.setRegisterType(QModbusDataUnit::HoldingRegisters);
-    dataUnit.setStartAddress(0);
-    dataUnit.setValueCount(HoldingRegisters::count);
+    QModbusDataUnit dataUnit(QModbusDataUnit::HoldingRegisters, 0, HoldingRegisters::count);
 
     // Sending request to the device with specified Unit Id
-    auto* reply = sendReadRequest(dataUnit);
+    auto* reply = m_client.sendReadRequest(dataUnit, m_cfg.unitId);
     if (!reply)
         return;
 
@@ -149,13 +143,25 @@ void QtModbusBridge::onReadInfo()
 void QtModbusBridge::onWriteConfig(const ModelConfig& cmd)
 {
     qDebug() << "[QtModbusBridge] Writing a new configuration to the model";
-    // TODO: implement later
+
+    QModbusDataUnit dataUnit(QModbusDataUnit::HoldingRegisters, 0, HoldingRegisters::count);
+    setRegisterValues(dataUnit, HoldingRegisters::omega_ICE_max_prir, m_decoder.toRegisterWords(cmd.maxRpmPrir));
+    setRegisterValues(dataUnit, HoldingRegisters::omega_ICE_max_run, m_decoder.toRegisterWords(cmd.maxRpmRun));
+    setRegisterValues(dataUnit, HoldingRegisters::P_oil_max, m_decoder.toRegisterWords(cmd.maxDieselPressure));
+    setRegisterValues(dataUnit, HoldingRegisters::P_oil_min, m_decoder.toRegisterWords(cmd.minDieselPressure));
+    setRegisterValues(dataUnit, HoldingRegisters::T_cool_max, m_decoder.toRegisterWords(cmd.maxDieselTemp));
+    setRegisterValues(dataUnit, HoldingRegisters::T_AD_max, m_decoder.toRegisterWords(cmd.maxMotorTemp));
+    setRegisterValues(dataUnit, HoldingRegisters::T_ballast_max, m_decoder.toRegisterWords(cmd.maxResistorTemp));
+
+    auto* reply = m_client.sendWriteRequest(dataUnit, m_cfg.unitId);
+    if (!reply)
+        return;
 }
 
 void QtModbusBridge::onWriteDecision(const Decision& decision)
 {
     qDebug() << "[QtModbusBridge] Sending a decision to the model";
-    // TODO: implement later
+    QModbusDataUnit dataUnit(QModbusDataUnit::HoldingRegisters, 0, HoldingRegisters::count);
 }
 
 std::optional<QVector<quint16>> QtModbusBridge::extractValues(QModbusReply* reply, qsizetype expectedSize)
@@ -178,13 +184,13 @@ std::optional<QVector<quint16>> QtModbusBridge::extractValues(QModbusReply* repl
 void QtModbusBridge::parseSensorsResponse(const QVector<quint16>& values)
 {
     SensorFrame frame = {
-        static_cast<double>(values[InputRegisters::T_cool]),
-        static_cast<double>(values[InputRegisters::T_AD]),
-        static_cast<double>(values[InputRegisters::T_ballast]),
-        static_cast<double>(values[InputRegisters::P_oil]),
-        static_cast<double>(values[InputRegisters::M_AD]),
-        static_cast<double>(values[InputRegisters::f_AD]),
-        static_cast<qint64>(values[InputRegisters::timestamp_ir]),
+        m_decoder.fromRegisterWordDouble(&values[InputRegisters::T_cool]),
+        m_decoder.fromRegisterWordDouble(&values[InputRegisters::T_AD]),
+        m_decoder.fromRegisterWordDouble(&values[InputRegisters::T_ballast]),
+        m_decoder.fromRegisterWordDouble(&values[InputRegisters::P_oil]),
+        m_decoder.fromRegisterWordDouble(&values[InputRegisters::M_AD]),
+        m_decoder.fromRegisterWordDouble(&values[InputRegisters::f_AD]),
+        m_decoder.fromRegisterWordQint(&values[InputRegisters::timestamp_ir]),
         1  // TODO: clarify what does stage mean
     };
     emit sensorsDataReady(frame);
@@ -193,43 +199,21 @@ void QtModbusBridge::parseSensorsResponse(const QVector<quint16>& values)
 void QtModbusBridge::parseInfoResponse(const QVector<quint16>& values)
 {
     ModelConfig info = {
-        static_cast<double>(values[HoldingRegisters::T_cool_max]),
-        static_cast<double>(values[HoldingRegisters::T_AD_max]),
-        static_cast<double>(values[HoldingRegisters::T_ballast_max]),
-        static_cast<double>(values[HoldingRegisters::P_oil_max]),
-        static_cast<double>(values[HoldingRegisters::P_oil_min]),
-        static_cast<int>(values[HoldingRegisters::omega_ICE_max_prir]),
-        static_cast<int>(values[HoldingRegisters::omega_ICE_max_run]),
+        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::T_cool_max]),
+        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::T_AD_max]),
+        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::T_ballast_max]),
+        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::P_oil_max]),
+        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::P_oil_min]),
+        m_decoder.fromRegisterWordInt(&values[HoldingRegisters::omega_ICE_max_prir]),
+        m_decoder.fromRegisterWordInt(&values[HoldingRegisters::omega_ICE_max_run]),
     };
     emit modelInfoReady(info);
 }
 
-QModbusReply* QtModbusBridge::sendWriteRequest(const QModbusDataUnit& dataUnit) {
-    auto* reply = m_client.sendWriteRequest(dataUnit, m_cfg.unitId);
-    if (!reply)
+void QtModbusBridge::setRegisterValues(QModbusDataUnit& dataUnit, qsizetype startAddress, const QList<quint16>& values)
+{
+    for (qsizetype i = 0; i < values.size(); ++i)
     {
-        return nullptr;
+        dataUnit.setValue(startAddress + i, values[i]);
     }
-    // Check if request failed immediately
-    if (reply->isFinished())
-    {
-        reply->deleteLater();
-        return nullptr;
-    }
-    return reply;
-}
-
-QModbusReply* QtModbusBridge::sendReadRequest(const QModbusDataUnit& dataUnit) {
-    auto* reply = m_client.sendReadRequest(dataUnit, m_cfg.unitId);
-    if (!reply)
-    {
-        return nullptr;
-    }
-    // Check if request failed immediately
-    if (reply->isFinished())
-    {
-        reply->deleteLater();
-        return nullptr;
-    }
-    return reply;
 }
