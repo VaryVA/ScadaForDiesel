@@ -1,0 +1,20 @@
+{
+	"BUILD_DIR" : "/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/frontend_autogen",
+	"CMAKE_BINARY_DIR" : "/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/avva/ScadaForDiesel/frontend",
+	"CMAKE_SOURCE_DIR" : "/home/avva/ScadaForDiesel/frontend",
+	"GENERATOR" : "Ninja",
+	"INCLUDE_DIR" : "/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/frontend_autogen/include",
+	"INPUTS" : [ "/home/avva/ScadaForDiesel/frontend/resources/Mnemoschme.png" ],
+	"LOCK_FILE" : "/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/CMakeFiles/frontend_autogen.dir/AutoRcc_resources_3YJK5W5UP7_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "--no-zstd", "-name", "resources" ],
+	"OUTPUT_CHECKSUM" : "3YJK5W5UP7",
+	"OUTPUT_NAME" : "qrc_resources.cpp",
+	"RCC_EXECUTABLE" : "/opt/qt6/./libexec/rcc",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/CMakeFiles/frontend_autogen.dir/AutoRcc_resources_3YJK5W5UP7_Used.txt",
+	"SOURCE" : "/home/avva/ScadaForDiesel/frontend/resources/resources.qrc",
+	"VERBOSITY" : 0
+}

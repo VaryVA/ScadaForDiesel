@@ -11,8 +11,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets Charts REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Charts REQUIRED)
 
 set(RESOURCES
     resources/resources.qrc
@@ -31,14 +31,20 @@ file(GLOB_RECURSE TAB_SOURCES
         src/tabs/*.ui
 )
 
+file(GLOB_RECURSE CORE_SOURCES
+        src/core/*.cpp
+        src/core/*.h
+)
+
 # Объединяем все источники
-list(APPEND PROJECT_SOURCES ${TAB_SOURCES})
+list(APPEND PROJECT_SOURCES ${TAB_SOURCES} ${CORE_SOURCES})
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(frontend
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         ${RESOURCES}
+        src/core/data/trendcontroller.h src/core/data/trendcontroller.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET frontend APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -58,7 +64,10 @@ else()
     endif()
 endif()
 
-target_link_libraries(frontend PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(frontend PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Charts
+)
 
 set_target_properties(frontend PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
