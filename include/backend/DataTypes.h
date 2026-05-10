@@ -96,7 +96,7 @@ namespace DiscreteRegisters
 struct ModbusConfig
 {
     //Ip-адрес Modbus-сервера
-    QString host;
+    QString host = "127.0.0.1";
     //Порт Modbus-сервера
     quint16 port = 1502;
     int pollFrequencyMs = 1000;
@@ -144,25 +144,58 @@ struct ModelConfig
     int maxRpmPrir;
     //Общая частота оборотов в режиме обкатки
     int maxRpmRun;
+    //Частота АД
+    double freqAD;
+    //Момент АД
+    double momentAD;
 };
 Q_DECLARE_METATYPE(ModelConfig)
+
+
+//Команды на симуляцию
+enum class SimulationCommand : uint8_t
+{
+    None,
+    Start,
+    Stop,
+    Reset,
+    EmergencyStop
+};
+
+//Запрос на симуляцию
+enum class SimulationRequest : uint8_t
+{
+    None,
+    ReadCurrentState,
+    StepAndRead
+};
+
+//Режим симуляции
+enum class SimulationMode : uint8_t
+{
+    ColdRun,
+    StartWarmup,
+    HotNoLoad,
+    HotLoad
+};
 
 // тип управляющего воздействия (это требует уточнения)
 enum class ControlType
 {
     None,
-    Throttle,     // дроссель
-    BrakeTorque,  // тормозной момент
-    TargetRpm,    // целевые обороты
-    MotorEnable,  // вкл/выкл мотора
-    EmergencyStop // аварийный стоп
+    SimulationCommand, // Команда на симуляцию (simulationCommand)
+    SimulationRequest, // Запрос на симуляцию (simulationRequest)
+    SimulationMode,    // Режим симуляции (simulationMode)
+    Fan_ICE,
+    Fan_AD,
+    Fan_Ballast
 };
 
 // одно управляющее воздействие (тип + значение)
 struct ModelControl
 {
     ControlType type = ControlType::None;
-    double value = 0.0;
+    uint8_t value = 0;
 };
 Q_DECLARE_METATYPE(ModelControl)
 
