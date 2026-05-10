@@ -20,6 +20,11 @@ private slots:
 
 private:
     Ui::settings_tab *ui;
+
+    void отправки(const QJsonObject &data);
+    void отправки2(const QJsonObject &data);
+
+    QJsonObject собратьДанные();
 };
 
 #endif // SETTINGS_TAB_H
