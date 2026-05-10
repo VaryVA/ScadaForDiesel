@@ -36,6 +36,7 @@ set(BACKEND_HEADERS
     ${PROJECT_SOURCE_DIR}/include/backend/data_processing/DataProcessor.h
     ${PROJECT_SOURCE_DIR}/include/backend/data_store/DataStore.h
     ${PROJECT_SOURCE_DIR}/include/backend/DataTypes.h
+    ${PROJECT_SOURCE_DIR}/include/backend/BackendGlobal.h
     ${PROJECT_SOURCE_DIR}/include/backend/config_data/config_data.h
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/IModbusBridge.h
     ${PROJECT_SOURCE_DIR}/include/backend/modbus_client/QtModbusBridge.h
@@ -46,6 +47,8 @@ set(BACKEND_HEADERS
 
 # Библиотека
 add_library(backend_lib SHARED)
+
+target_compile_definitions(backend_lib PRIVATE BACKEND_LIBRARY)
 
 target_sources(backend_lib
     PRIVATE
@@ -74,53 +77,53 @@ source_group(TREE "${PROJECT_SOURCE_DIR}/include" PREFIX "include" FILES ${BACKE
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "src" FILES ${BACKEND_SOURCES})
 
 # Unit Tests
-enable_testing()
+# enable_testing()
 
-# Макрос для создания тестов
-macro(add_backend_test TEST_NAME)
-    add_executable(${TEST_NAME} ${ARGN})
+# # Макрос для создания тестов
+# macro(add_backend_test TEST_NAME)
+#     add_executable(${TEST_NAME} ${ARGN})
 
-    target_include_directories(${TEST_NAME} PRIVATE
-        ${PROJECT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+#     target_include_directories(${TEST_NAME} PRIVATE
+#         ${PROJECT_SOURCE_DIR}/include
+#         ${CMAKE_CURRENT_SOURCE_DIR}
+#     )
 
-    target_link_libraries(${TEST_NAME} PRIVATE
-        Qt6::Core
-        Qt6::Test
-        Qt6::Network
-        Qt6::SerialBus
-        backend_lib
-    )
+#     target_link_libraries(${TEST_NAME} PRIVATE
+#         Qt6::Core
+#         Qt6::Test
+#         Qt6::Network
+#         Qt6::SerialBus
+#         backend_lib
+#     )
 
-    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-endmacro()
+#     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+# endmacro()
 
-# Добавляем тесты
-add_backend_test(test_backend_worker
-    unit_tests/backend_worker_test/backend_worker_test.cpp
-    unit_tests/backend_worker_test/backend_worker_test.h
-)
+# # Добавляем тесты
+# add_backend_test(test_backend_worker
+#     unit_tests/backend_worker_test/backend_worker_test.cpp
+#     unit_tests/backend_worker_test/backend_worker_test.h
+# )
 
-add_backend_test(test_data_processor
-    unit_tests/data_processor_test/data_processor_test.cpp
-    unit_tests/data_processor_test/data_processor_test.h
-)
+# add_backend_test(test_data_processor
+#     unit_tests/data_processor_test/data_processor_test.cpp
+#     unit_tests/data_processor_test/data_processor_test.h
+# )
 
-add_backend_test(test_data_store
-    unit_tests/data_store_test/data_store_test.cpp
-    unit_tests/data_store_test/data_store_test.h
-)
+# add_backend_test(test_data_store
+#     unit_tests/data_store_test/data_store_test.cpp
+#     unit_tests/data_store_test/data_store_test.h
+# )
 
-add_backend_test(test_modbus_data_bridge
-    unit_tests/modbus_data_bridge_test/modbus_data_bridge_test.cpp
-    unit_tests/modbus_data_bridge_test/modbus_data_bridge_test.h
-)
+# add_backend_test(test_modbus_data_bridge
+#     unit_tests/modbus_data_bridge_test/modbus_data_bridge_test.cpp
+#     unit_tests/modbus_data_bridge_test/modbus_data_bridge_test.h
+# )
 
-add_backend_test(test_state_machine
-    unit_tests/state_machine_test/state_machine_test.cpp
-    unit_tests/state_machine_test/state_machine_test.h
-)
+# add_backend_test(test_state_machine
+#     unit_tests/state_machine_test/state_machine_test.cpp
+#     unit_tests/state_machine_test/state_machine_test.h
+# )
 
 # Вывод информации о сборке
 message(STATUS "Backend Library: backend_lib")

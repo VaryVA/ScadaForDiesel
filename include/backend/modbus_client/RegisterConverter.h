@@ -3,6 +3,7 @@
 #include <QVector>
 #include <QDebug>
 #include <bit>
+#include <array>
 
 class RegisterConverter
 {

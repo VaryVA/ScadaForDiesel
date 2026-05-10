@@ -1,13 +1,10 @@
 #pragma once
 #include <QObject>
 #include <QString>
+#include "backend/DataTypes.h"
+#include "backend/BackendGlobal.h"
 
-class ModbusConfig;
-class ModelConfig;
-class Decision;
-class SensorFrame;
-
-class IModbusBridge : public QObject
+class BACKEND_EXPORT IModbusBridge : public QObject
 {
     Q_OBJECT
 public:

@@ -110,8 +110,10 @@ void QtModbusBridge::onReadSensors()
     // Handling reply with finished signal
     QObject::connect(reply, &QModbusReply::finished, this, [this, reply]()
     {
+        qDebug() << "[QtModbusBridge] Received reply with sensor data, begin to extract values";
         auto values = extractValues(reply, InputRegisters::size);
         if (!values.has_value())
+            qWarning() << "[QtModbusBridge] Failed to extract data";
             return;
         parseSensorsResponse(values.value());
         reply->deleteLater();
@@ -199,14 +201,18 @@ void QtModbusBridge::onWriteDecision(const Decision& decision)
 std::optional<QVector<quint16>> QtModbusBridge::extractValues(QModbusReply* reply, qsizetype expectedSize)
 {
     if (reply->error() != QModbusDevice::NoError)
+    {
         return std::nullopt;
+    }
 
     const QModbusDataUnit result = reply->result();
     const QVector<quint16> values = result.values();
 
     if (values.size() != expectedSize)
     {
-        emit requestError("Size of received data differs from expected HoldingRegisters::size");
+        qWarning() << "[extractValues] size mismatch, values.size() =" << values.size()
+                    << ", expectedSize =" << expectedSize;
+        emit requestError("Size of received data differs from expected size");
         return std::nullopt;
     }
 
@@ -215,6 +221,8 @@ std::optional<QVector<quint16>> QtModbusBridge::extractValues(QModbusReply* repl
 
 void QtModbusBridge::parseSensorsResponse(const QVector<quint16>& values)
 {
+    qDebug() << "[parseSensorsResponse] entered, values.size() =" << values.size();
+
     SensorFrame frame = {
         m_decoder.fromRegisterWordDouble(&values[InputRegisters::T_cool]),
         m_decoder.fromRegisterWordDouble(&values[InputRegisters::T_AD]),

@@ -6,7 +6,7 @@
 #include <QModbusDataUnit>
 #include <QModbusTcpClient>
 
-class QtModbusBridge : public IModbusBridge
+class BACKEND_EXPORT QtModbusBridge : public IModbusBridge
 {
     Q_OBJECT
 public:
