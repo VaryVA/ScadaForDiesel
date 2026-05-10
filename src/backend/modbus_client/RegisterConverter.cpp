@@ -1,4 +1,5 @@
 #include "backend/modbus_client/RegisterConverter.h"
+#include <QDebug>
 #include <bit>
 
 double RegisterConverter::fromRegisterWordDouble(const quint16* value)
@@ -35,7 +36,7 @@ quint64 RegisterConverter::fromRegisterWordRawValue(const quint16* value, qsizet
         qWarning() << "Can't read into quint64 more than 4 registers, function returned 0";
         return 0;
     }
-    quint64 res;
+    quint64 res = 0;
     for (qsizetype i = 0; i < count; ++i)
     {
         res |= static_cast<quint64>(*(value + i)) << (count - i - 1) * 16;

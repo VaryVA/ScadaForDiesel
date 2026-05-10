@@ -162,6 +162,38 @@ void QtModbusBridge::onWriteDecision(const Decision& decision)
 {
     qDebug() << "[QtModbusBridge] Sending a decision to the model";
     QModbusDataUnit dataUnit(QModbusDataUnit::HoldingRegisters, 0, HoldingRegisters::count);
+    for (const auto& control : decision.controls)
+    {
+        qsizetype startAddress = -1;
+        switch(control.type)
+        {
+        case ControlType::BrakeTorque:
+            startAddress = HoldingRegisters::M_AD_target;
+            break;
+        case ControlType::EmergencyStop:
+            startAddress = HoldingRegisters::simulationCommand;
+            break;
+        case ControlType::MotorEnable:
+            startAddress = HoldingRegisters::simulationCommand;
+            break;
+        case ControlType::TargetRpm:
+            startAddress = HoldingRegisters::f_AD_Input;
+            break;
+        case ControlType::Throttle:
+            startAddress = HoldingRegisters::simulationRequest;
+            break;
+        case ControlType::None:
+            break;
+        default:
+            qWarning() << "[QtModbusBridge] Unexpected ControlType was received in onWriteDecision";
+        }
+        if (startAddress == -1)
+            continue;
+        dataUnit.setValue(startAddress, control.value);
+    }
+    auto* reply = m_client.sendWriteRequest(dataUnit, m_cfg.unitId);
+    if (!reply)
+        return;
 }
 
 std::optional<QVector<quint16>> QtModbusBridge::extractValues(QModbusReply* reply, qsizetype expectedSize)
