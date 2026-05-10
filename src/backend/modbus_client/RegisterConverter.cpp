@@ -1,6 +1,5 @@
 #include "backend/modbus_client/RegisterConverter.h"
 #include <QDebug>
-#include <bit>
 
 double RegisterConverter::fromRegisterWordDouble(const quint16* value)
 {
@@ -15,18 +14,6 @@ qint64 RegisterConverter::fromRegisterWordQint(const quint16* value)
 int RegisterConverter::fromRegisterWordInt(const quint16* value)
 {
     return static_cast<int>(fromRegisterWordRawValue(value, 4));
-}
-
-template<typename ValueT>
-QList<quint16> RegisterConverter::toRegisterWords(const ValueT& value)
-{
-    if (sizeof(ValueT) % sizeof(quint16) != 0)
-    {
-        qWarning() << "Value type must be divisible by register word";
-        return {};
-    }
-    auto bits = std::bit_cast<std::array<quint16, sizeof(ValueT) / sizeof(quint16)>>(value);
-    return QVector<quint16>(bits.begin(), bits.end());
 }
 
 quint64 RegisterConverter::fromRegisterWordRawValue(const quint16* value, qsizetype count)
