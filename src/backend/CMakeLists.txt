@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Настройки проекта
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -45,8 +45,7 @@ set(BACKEND_HEADERS
 )
 
 # Библиотека
-add_library(backend_lib SHARED
-    TypeDecoder.h)
+add_library(backend_lib SHARED)
 
 target_sources(backend_lib
     PRIVATE
