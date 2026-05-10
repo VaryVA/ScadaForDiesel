@@ -1,5 +1,0 @@
-/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/CMakeFiles/frontend.dir
-/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/CMakeFiles/edit_cache.dir
-/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/CMakeFiles/rebuild_cache.dir
-/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/CMakeFiles/frontend_autogen_timestamp_deps.dir
-/home/avva/ScadaForDiesel/frontend/build/Prosyst_6_7_0-Debug/CMakeFiles/frontend_autogen.dir
