@@ -3,6 +3,7 @@
 
 #include "../tabs/main_tab/main_tab.h"
 #include "../tabs/settings_tab/settings_tab.h"
+#include "../tabs/trend_tab/trend_tab.h"
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow)
 {
@@ -10,7 +11,8 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
 
     // Добавляем виджеты на вкладки
     ui->tabWidget->addTab(new main_tab(this), "Мнемосхема");
-     ui->tabWidget->addTab(new settings_tab(this), "Настройки");
+    ui->tabWidget->addTab(new settings_tab(this), "Настройки");
+    ui->tabWidget->addTab(new trend_tab(this), "Тренды");
     ui->tabWidget->setStyleSheet(
         /* Стиль для области содержимого */
         "QTabWidget::pane {"

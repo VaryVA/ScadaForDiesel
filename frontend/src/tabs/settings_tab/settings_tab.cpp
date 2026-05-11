@@ -1,5 +1,8 @@
 #include "settings_tab.h"
 #include "ui_settings_tab.h"
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QJsonValue>
 
 // Технически, тут должны быть функции от бэка, но на руках пока их нет
 
