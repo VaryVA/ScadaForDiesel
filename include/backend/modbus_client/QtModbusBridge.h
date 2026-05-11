@@ -6,7 +6,12 @@
 #include <QModbusDataUnit>
 #include <QModbusTcpClient>
 
-using RegisterPair = std::pair<quint16, QVector<quint16>>;
+struct RegisterBlock
+{
+    QModbusDataUnit::RegisterType type;
+    quint16 startAddress;
+    QVector<quint16> values;
+};
 
 class BACKEND_EXPORT QtModbusBridge : public IModbusBridge
 {
@@ -28,7 +33,8 @@ private:
     void parseSensorsResponse(const QVector<quint16>& values);
     void parseInfoResponse(const QVector<quint16>& values);
     std::optional<QVector<quint16>> extractValues(QModbusReply* reply, qsizetype expectedSize);
-    void writeRegisterVector(std::span<const RegisterPair> regs);
+    //OPTIMIZE: move sorting elsewhere and receive regs by reference if encountered speed issues
+    void writeRegisterVector(QVector<RegisterBlock> regs);
 private:
     ModbusConfig m_cfg;
     QModbusTcpClient m_client;

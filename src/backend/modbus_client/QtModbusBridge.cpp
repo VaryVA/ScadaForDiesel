@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QModbusTcpClient>
 #include <QVariant>
+#include <algorithm>
 
 QtModbusBridge::QtModbusBridge(const ModbusConfig& cfg, QObject* parent) : IModbusBridge(cfg, parent)
 {
@@ -115,7 +116,7 @@ void QtModbusBridge::onReadSensors()
     QObject::connect(reply, &QModbusReply::finished, this, [this, reply]()
     {
         qDebug() << "[QtModbusBridge] Received reply with sensor data, begin to extract values";
-        auto values = extractValues(reply, InputRegisters::size);
+        auto values = extractValues(reply, InputRegisters::count);
         if (!values.has_value())
         {
             qWarning() << "[QtModbusBridge] Failed to extract sensor data";
@@ -143,7 +144,7 @@ void QtModbusBridge::onReadInfo()
     QObject::connect(reply, &QModbusReply::finished, this, [this, reply]()
     {
         qDebug() << "[QtModbusBridge] Received reply with model info data, begin to extract values";
-        auto values = extractValues(reply, HoldingRegisters::size);
+        auto values = extractValues(reply, HoldingRegisters::count);
         if (!values.has_value())
         {
             qWarning() << "[QtModbusBridge] Failed to extract model info data";
@@ -157,33 +158,54 @@ void QtModbusBridge::onReadInfo()
 void QtModbusBridge::onWriteConfig(const ModelConfig& cmd)
 {
     qDebug() << "[QtModbusBridge] Writing a new configuration to the model";
+
+    QVector<RegisterBlock> regs;
+    regs.reserve(9);
+
     regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
         HoldingRegisters::omega_ICE_max_prir,
         m_reg_converter.toRegisterWords(cmd.maxRpmRun)
     );
     regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
         HoldingRegisters::omega_ICE_max_run,
         m_reg_converter.toRegisterWords(cmd.maxDieselPressure)
     );
     regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
         HoldingRegisters::P_oil_max,
         m_reg_converter.toRegisterWords(cmd.maxDieselPressure)
     );
     regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
         HoldingRegisters::P_oil_min,
         m_reg_converter.toRegisterWords(cmd.minDieselPressure)
     );
     regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
         HoldingRegisters::T_cool_max,
         m_reg_converter.toRegisterWords(cmd.maxDieselTemp)
     );
     regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
         HoldingRegisters::T_AD_max,
         m_reg_converter.toRegisterWords(cmd.maxMotorTemp)
     );
     regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
         HoldingRegisters::T_ballast_max,
         m_reg_converter.toRegisterWords(cmd.maxResistorTemp)
+    );
+    regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
+        HoldingRegisters::f_AD_Input,
+        m_reg_converter.toRegisterWords(cmd.freqAD)
+    );
+    regs.emplace_back(
+        QModbusDataUnit::HoldingRegisters,
+        HoldingRegisters::M_AD_target,
+        m_reg_converter.toRegisterWords(cmd.momentAD)
     );
     writeRegisterVector(regs);
 }
@@ -191,27 +213,37 @@ void QtModbusBridge::onWriteConfig(const ModelConfig& cmd)
 void QtModbusBridge::onWriteDecision(const Decision& decision)
 {
     qDebug() << "[QtModbusBridge] Sending a decision to the model";
-    QVector<RegisterPair> regs;
+    QVector<RegisterBlock> regs;
     regs.reserve(decision.controls.size());
     for (const auto& control : decision.controls)
     {
+        QModbusDataUnit::RegisterType regType = QModbusDataUnit::Invalid;
         qsizetype startAddress = -1;
         switch(control.type)
         {
-        case ControlType::BrakeTorque:
-            startAddress = HoldingRegisters::M_AD_target;
-            break;
-        case ControlType::EmergencyStop:
+        case ControlType::SimulationCommand:
+            regType = QModbusDataUnit::HoldingRegisters;
             startAddress = HoldingRegisters::simulationCommand;
             break;
-        case ControlType::MotorEnable:
-            startAddress = HoldingRegisters::simulationCommand;
+        case ControlType::SimulationMode:
+            regType = QModbusDataUnit::HoldingRegisters;
+            startAddress = HoldingRegisters::simulationMode;
             break;
-        case ControlType::TargetRpm:
-            startAddress = HoldingRegisters::f_AD_Input;
-            break;
-        case ControlType::Throttle:
+        case ControlType::SimulationRequest:
+            regType = QModbusDataUnit::HoldingRegisters;
             startAddress = HoldingRegisters::simulationRequest;
+            break;
+        case ControlType::Fan_AD:
+            regType = QModbusDataUnit::Coils;
+            startAddress = CoilsRegisters::fan_AD;
+            break;
+        case ControlType::Fan_Ballast:
+            regType = QModbusDataUnit::Coils;
+            startAddress = CoilsRegisters::fan_ballast;
+            break;
+        case ControlType::Fan_ICE:
+            regType = QModbusDataUnit::Coils;
+            startAddress = CoilsRegisters::fan_ICE;
             break;
         case ControlType::None:
             break;
@@ -220,7 +252,11 @@ void QtModbusBridge::onWriteDecision(const Decision& decision)
         }
         if (startAddress == -1)
             continue;
-        regs.emplace_back(startAddress, std::move(control.value));
+        regs.emplace_back(
+            regType,
+            startAddress,
+            QVector<quint16>{ static_cast<quint16>(control.value) }
+        );
     }
     writeRegisterVector(regs);
 }
@@ -277,13 +313,19 @@ void QtModbusBridge::parseInfoResponse(const QVector<quint16>& values)
     emit modelInfoReady(info);
 }
 
-void QtModbusBridge::writeRegisterVector(std::span<const RegisterPair> regs)
+void QtModbusBridge::writeRegisterVector(QVector<RegisterBlock> regs)
 {
     if (regs.empty())
         return;
 
-    quint16 batchStart = regs[0].first;
+    std::sort(regs.begin(), regs.end(), [](const auto& lhs, const auto& rhs) {
+        return std::tie(lhs.type, lhs.startAddress) < std::tie(rhs.type, rhs.startAddress);
+    });
+
+    QModbusDataUnit::RegisterType batchType = regs[0].type;
+    quint16 batchStart = regs[0].startAddress;
     quint16 expectedAddress = batchStart;
+
     QVector<quint16> batchValues;
     batchValues.reserve(regs.size());
 
@@ -293,7 +335,7 @@ void QtModbusBridge::writeRegisterVector(std::span<const RegisterPair> regs)
             return;
 
         QModbusDataUnit unit(
-            QModbusDataUnit::HoldingRegisters,
+            batchType,
             batchStart,
             batchValues
         );
@@ -301,19 +343,20 @@ void QtModbusBridge::writeRegisterVector(std::span<const RegisterPair> regs)
         m_client.sendWriteRequest(unit, m_cfg.unitId);
     };
 
-    for (const auto& [address, values] : regs)
+    for (const RegisterBlock& reg : regs)
     {
-        if (address != expectedAddress)
+        if (reg.startAddress != expectedAddress || reg.type != batchType)
         {
             flush();
 
-            batchStart = address;
+            batchType = reg.type;
+            batchStart = reg.startAddress;
             batchValues.clear();
-            expectedAddress = address;
+            expectedAddress = reg.startAddress;
         }
 
-        batchValues.append(values);
-        expectedAddress += values.size();
+        batchValues.append(reg.values);
+        expectedAddress += reg.values.size();
     }
 
     flush();
