@@ -63,7 +63,9 @@ void QtModbusBridge::onErrorOccured()
 {
     QModbusDevice::Error error = m_client.error();
     if (error == QModbusDevice::NoError)
+    {
         return;
+    }
 
     QString reason = m_client.errorString();
     if (error == QModbusDevice::ConfigurationError)
@@ -105,7 +107,9 @@ void QtModbusBridge::onReadSensors()
     // Sending request to the device with specified Unit Id
     auto* reply = m_client.sendReadRequest(dataUnit, m_cfg.unitId);
     if (!reply)
+    {
         return;
+    }
 
     // Handling reply with finished signal
     QObject::connect(reply, &QModbusReply::finished, this, [this, reply]()
@@ -113,8 +117,10 @@ void QtModbusBridge::onReadSensors()
         qDebug() << "[QtModbusBridge] Received reply with sensor data, begin to extract values";
         auto values = extractValues(reply, InputRegisters::size);
         if (!values.has_value())
-            qWarning() << "[QtModbusBridge] Failed to extract data";
+        {
+            qWarning() << "[QtModbusBridge] Failed to extract sensor data";
             return;
+        }
         parseSensorsResponse(values.value());
         reply->deleteLater();
     });
@@ -129,14 +135,20 @@ void QtModbusBridge::onReadInfo()
     // Sending request to the device with specified Unit Id
     auto* reply = m_client.sendReadRequest(dataUnit, m_cfg.unitId);
     if (!reply)
+    {
         return;
+    }
 
     // Handling reply with finished signal
     QObject::connect(reply, &QModbusReply::finished, this, [this, reply]()
     {
+        qDebug() << "[QtModbusBridge] Received reply with model info data, begin to extract values";
         auto values = extractValues(reply, HoldingRegisters::size);
         if (!values.has_value())
+        {
+            qWarning() << "[QtModbusBridge] Failed to extract model info data";
             return;
+        }
         parseInfoResponse(values.value());
         reply->deleteLater();
     });
@@ -145,25 +157,42 @@ void QtModbusBridge::onReadInfo()
 void QtModbusBridge::onWriteConfig(const ModelConfig& cmd)
 {
     qDebug() << "[QtModbusBridge] Writing a new configuration to the model";
-
-    QModbusDataUnit dataUnit(QModbusDataUnit::HoldingRegisters, 0, HoldingRegisters::count);
-    setRegisterValues(dataUnit, HoldingRegisters::omega_ICE_max_prir, m_decoder.toRegisterWords(cmd.maxRpmPrir));
-    setRegisterValues(dataUnit, HoldingRegisters::omega_ICE_max_run, m_decoder.toRegisterWords(cmd.maxRpmRun));
-    setRegisterValues(dataUnit, HoldingRegisters::P_oil_max, m_decoder.toRegisterWords(cmd.maxDieselPressure));
-    setRegisterValues(dataUnit, HoldingRegisters::P_oil_min, m_decoder.toRegisterWords(cmd.minDieselPressure));
-    setRegisterValues(dataUnit, HoldingRegisters::T_cool_max, m_decoder.toRegisterWords(cmd.maxDieselTemp));
-    setRegisterValues(dataUnit, HoldingRegisters::T_AD_max, m_decoder.toRegisterWords(cmd.maxMotorTemp));
-    setRegisterValues(dataUnit, HoldingRegisters::T_ballast_max, m_decoder.toRegisterWords(cmd.maxResistorTemp));
-
-    auto* reply = m_client.sendWriteRequest(dataUnit, m_cfg.unitId);
-    if (!reply)
-        return;
+    regs.emplace_back(
+        HoldingRegisters::omega_ICE_max_prir,
+        m_reg_converter.toRegisterWords(cmd.maxRpmRun)
+    );
+    regs.emplace_back(
+        HoldingRegisters::omega_ICE_max_run,
+        m_reg_converter.toRegisterWords(cmd.maxDieselPressure)
+    );
+    regs.emplace_back(
+        HoldingRegisters::P_oil_max,
+        m_reg_converter.toRegisterWords(cmd.maxDieselPressure)
+    );
+    regs.emplace_back(
+        HoldingRegisters::P_oil_min,
+        m_reg_converter.toRegisterWords(cmd.minDieselPressure)
+    );
+    regs.emplace_back(
+        HoldingRegisters::T_cool_max,
+        m_reg_converter.toRegisterWords(cmd.maxDieselTemp)
+    );
+    regs.emplace_back(
+        HoldingRegisters::T_AD_max,
+        m_reg_converter.toRegisterWords(cmd.maxMotorTemp)
+    );
+    regs.emplace_back(
+        HoldingRegisters::T_ballast_max,
+        m_reg_converter.toRegisterWords(cmd.maxResistorTemp)
+    );
+    writeRegisterVector(regs);
 }
 
 void QtModbusBridge::onWriteDecision(const Decision& decision)
 {
     qDebug() << "[QtModbusBridge] Sending a decision to the model";
-    QModbusDataUnit dataUnit(QModbusDataUnit::HoldingRegisters, 0, HoldingRegisters::count);
+    QVector<RegisterPair> regs;
+    regs.reserve(decision.controls.size());
     for (const auto& control : decision.controls)
     {
         qsizetype startAddress = -1;
@@ -191,11 +220,9 @@ void QtModbusBridge::onWriteDecision(const Decision& decision)
         }
         if (startAddress == -1)
             continue;
-        dataUnit.setValue(startAddress, control.value);
+        regs.emplace_back(startAddress, std::move(control.value));
     }
-    auto* reply = m_client.sendWriteRequest(dataUnit, m_cfg.unitId);
-    if (!reply)
-        return;
+    writeRegisterVector(regs);
 }
 
 std::optional<QVector<quint16>> QtModbusBridge::extractValues(QModbusReply* reply, qsizetype expectedSize)
@@ -224,13 +251,13 @@ void QtModbusBridge::parseSensorsResponse(const QVector<quint16>& values)
     qDebug() << "[parseSensorsResponse] entered, values.size() =" << values.size();
 
     SensorFrame frame = {
-        m_decoder.fromRegisterWordDouble(&values[InputRegisters::T_cool]),
-        m_decoder.fromRegisterWordDouble(&values[InputRegisters::T_AD]),
-        m_decoder.fromRegisterWordDouble(&values[InputRegisters::T_ballast]),
-        m_decoder.fromRegisterWordDouble(&values[InputRegisters::P_oil]),
-        m_decoder.fromRegisterWordDouble(&values[InputRegisters::M_AD]),
-        m_decoder.fromRegisterWordDouble(&values[InputRegisters::f_AD]),
-        m_decoder.fromRegisterWordQint(&values[InputRegisters::timestamp_ir]),
+        m_reg_converter.fromRegisterWordDouble(&values[InputRegisters::T_cool]),
+        m_reg_converter.fromRegisterWordDouble(&values[InputRegisters::T_AD]),
+        m_reg_converter.fromRegisterWordDouble(&values[InputRegisters::T_ballast]),
+        m_reg_converter.fromRegisterWordDouble(&values[InputRegisters::P_oil]),
+        m_reg_converter.fromRegisterWordDouble(&values[InputRegisters::M_AD]),
+        m_reg_converter.fromRegisterWordDouble(&values[InputRegisters::f_AD]),
+        m_reg_converter.fromRegisterWordQint(&values[InputRegisters::timestamp_ir]),
         1  // TODO: clarify what does stage mean
     };
     emit sensorsDataReady(frame);
@@ -239,21 +266,55 @@ void QtModbusBridge::parseSensorsResponse(const QVector<quint16>& values)
 void QtModbusBridge::parseInfoResponse(const QVector<quint16>& values)
 {
     ModelConfig info = {
-        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::T_cool_max]),
-        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::T_AD_max]),
-        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::T_ballast_max]),
-        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::P_oil_max]),
-        m_decoder.fromRegisterWordDouble(&values[HoldingRegisters::P_oil_min]),
-        m_decoder.fromRegisterWordInt(&values[HoldingRegisters::omega_ICE_max_prir]),
-        m_decoder.fromRegisterWordInt(&values[HoldingRegisters::omega_ICE_max_run]),
+        m_reg_converter.fromRegisterWordDouble(&values[HoldingRegisters::T_cool_max]),
+        m_reg_converter.fromRegisterWordDouble(&values[HoldingRegisters::T_AD_max]),
+        m_reg_converter.fromRegisterWordDouble(&values[HoldingRegisters::T_ballast_max]),
+        m_reg_converter.fromRegisterWordDouble(&values[HoldingRegisters::P_oil_max]),
+        m_reg_converter.fromRegisterWordDouble(&values[HoldingRegisters::P_oil_min]),
+        m_reg_converter.fromRegisterWordInt(&values[HoldingRegisters::omega_ICE_max_prir]),
+        m_reg_converter.fromRegisterWordInt(&values[HoldingRegisters::omega_ICE_max_run]),
     };
     emit modelInfoReady(info);
 }
 
-void QtModbusBridge::setRegisterValues(QModbusDataUnit& dataUnit, qsizetype startAddress, const QList<quint16>& values)
+void QtModbusBridge::writeRegisterVector(std::span<const RegisterPair> regs)
 {
-    for (qsizetype i = 0; i < values.size(); ++i)
+    if (regs.empty())
+        return;
+
+    quint16 batchStart = regs[0].first;
+    quint16 expectedAddress = batchStart;
+    QVector<quint16> batchValues;
+    batchValues.reserve(regs.size());
+
+    auto flush = [&]()
     {
-        dataUnit.setValue(startAddress + i, values[i]);
+        if (batchValues.isEmpty())
+            return;
+
+        QModbusDataUnit unit(
+            QModbusDataUnit::HoldingRegisters,
+            batchStart,
+            batchValues
+        );
+
+        m_client.sendWriteRequest(unit, m_cfg.unitId);
+    };
+
+    for (const auto& [address, values] : regs)
+    {
+        if (address != expectedAddress)
+        {
+            flush();
+
+            batchStart = address;
+            batchValues.clear();
+            expectedAddress = address;
+        }
+
+        batchValues.append(values);
+        expectedAddress += values.size();
     }
+
+    flush();
 }

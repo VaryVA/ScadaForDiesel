@@ -8,8 +8,7 @@
 // InputRegisters offset (sensors data, only read operations)
 namespace InputRegisters
 {
-    static constexpr qsizetype size = 50;
-    static constexpr uint16_t count = 14;
+    static constexpr qsizetype count = 50;
     // Температура охлаждающей жидкости
     static constexpr uint16_t T_cool = 0;
     // Давление масла
@@ -43,8 +42,7 @@ namespace InputRegisters
 // HoldingRegisters offset (settings and variables, read/write operations)
 namespace HoldingRegisters
 {
-    static constexpr qsizetype size = 43;
-    static constexpr uint16_t count = 13;
+    static constexpr qsizetype count = 59;
     // Максимально допустимая температура охлаждающей жидкости
     static constexpr uint16_t T_cool_max = 0;
     // Минимально допустимое давление масла
@@ -55,28 +53,34 @@ namespace HoldingRegisters
     static constexpr uint16_t omega_ICE_max_prir = 12;
     // Максимально допустимая частота вращения ДВС в режиме обкатки
     static constexpr uint16_t omega_ICE_max_run = 16;
+    // Лишний регистр
+    static constexpr uint16_t rpm_max_lapping = 20;
+    // Лишний регистр
+    static constexpr uint16_t rpm_max_run = 24;
+    // Лишний регистр
+    static constexpr uint16_t target_brake_torque_nm = 28;
+    static constexpr uint16_t throttle_position = 32;
     // Максимально допустимая температура АД
-    static constexpr uint16_t T_AD_max = 20;
+    static constexpr uint16_t T_AD_max = 36;
     // Максимально допустимая температура балластных резисторов
-    static constexpr uint16_t T_ballast_max = 24;
+    static constexpr uint16_t T_ballast_max = 40;
     // Входная частота для АД / задание частоты АД
-    static constexpr uint16_t f_AD_Input = 28;  
+    static constexpr uint16_t f_AD_Input = 44;
     // Целевая механическая нагрузка / момент АД  
-    static constexpr uint16_t M_AD_target = 32;
+    static constexpr uint16_t M_AD_target = 48;
     // Версия (ревизия) настроек holding-регистров
-    static constexpr uint16_t revision_h = 36;
+    static constexpr uint16_t revision_h = 52;
     // Команда на симуляцию
-    static constexpr uint16_t simulationCommand = 40;
+    static constexpr uint16_t simulationCommand = 56;
     // Запрос на симуляцию
-    static constexpr uint16_t simulationRequest = 41;
+    static constexpr uint16_t simulationRequest = 57;
     // Режим симуляции
-    static constexpr uint16_t simulationMode = 42;
+    static constexpr uint16_t simulationMode = 58;
 }
 
 // Coils offset (control registers, read/write operations)
 namespace CoilsRegisters
 {
-    static constexpr qsizetype size = 3;
     static constexpr uint16_t count = 3;
     static constexpr uint16_t fan_ICE = 0;
     static constexpr uint16_t fan_AD = 1;
@@ -86,7 +90,6 @@ namespace CoilsRegisters
 // Discrete Inputs offset (device status, only read operations)
 namespace DiscreteRegisters
 {
-    static constexpr qsizetype size = 2;
     static constexpr uint16_t count = 2;
     static constexpr uint16_t hasFault = 0;
     static constexpr uint16_t hasLimitViolations = 1;

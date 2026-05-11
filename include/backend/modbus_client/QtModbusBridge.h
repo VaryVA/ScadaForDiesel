@@ -6,6 +6,8 @@
 #include <QModbusDataUnit>
 #include <QModbusTcpClient>
 
+using RegisterPair = std::pair<quint16, QVector<quint16>>;
+
 class BACKEND_EXPORT QtModbusBridge : public IModbusBridge
 {
     Q_OBJECT
@@ -26,11 +28,11 @@ private:
     void parseSensorsResponse(const QVector<quint16>& values);
     void parseInfoResponse(const QVector<quint16>& values);
     std::optional<QVector<quint16>> extractValues(QModbusReply* reply, qsizetype expectedSize);
-    void setRegisterValues(QModbusDataUnit& dataUnit, qsizetype startAddress, const QList<quint16>& values);
+    void writeRegisterVector(std::span<const RegisterPair> regs);
 private:
     ModbusConfig m_cfg;
     QModbusTcpClient m_client;
     QTimer m_pollTimer;
-    RegisterConverter m_decoder;
+    RegisterConverter m_reg_converter;
     QModbusDevice::State m_prevState = QModbusDevice::UnconnectedState;
 };
