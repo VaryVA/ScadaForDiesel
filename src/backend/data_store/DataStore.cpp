@@ -7,7 +7,6 @@
 #include <QStringList>
 
 #include "backend/data_store/DataStore.h"
-// #include "DataStore.h"
 
 // Low-level layer
 // === Connector ===
@@ -275,10 +274,7 @@ bool FileConnector::remove(int64_t id)
 {
     if (!isValidId(id))
     {
-        std::cerr << "[FileConnector::remove] "
-                  << "Invalid id: "
-                  << id << '\n';
-
+        std::cerr << "[FileConnector::remove] Invalid id: " << id << '\n';
         return false;
     }
 
@@ -286,23 +282,34 @@ bool FileConnector::remove(int64_t id)
 
     if (!file.is_open())
     {
-        std::cerr << "[FileConnector::remove] "
-                  << "Failed to open file.\n";
-
+        std::cerr << "[FileConnector::remove] Failed to open file.\n";
         return false;
     }
 
     size_t last_id = getSize() - 1;
-
     for (size_t current_id = static_cast<size_t>(id); current_id < last_id; ++current_id)
     {
         std::string buffer;
 
+        // читаем следующую запись
         if (!readRecord(file, getOffset(static_cast<int64_t>(current_id + 1)), buffer))
         {
             return false;
         }
 
+        // пересчёт id внутри строки
+        size_t delimiter = buffer.find(';');
+
+        if (delimiter == std::string::npos)
+        {
+            std::cerr << "[FileConnector::remove] "
+                      << "Malformed record: no id delimiter.\n";
+            return false;
+        }
+
+        buffer.replace(0, delimiter, std::to_string(current_id));
+
+        // записываем в текущую позицию
         if (!writeRecord(file, getOffset(static_cast<int64_t>(current_id)), buffer))
         {
             return false;
@@ -317,8 +324,7 @@ bool FileConnector::remove(int64_t id)
     }
     catch (const std::exception &e)
     {
-        std::cerr << "[FileConnector::remove] "
-                  << "resize_file failed: "
+        std::cerr << "[FileConnector::remove] resize_file failed: "
                   << e.what() << '\n';
 
         return false;
@@ -356,18 +362,23 @@ bool stringToDiagState(const QString &value, DiagState &state)
 }
 } // namespace
 
-DataStore::DataStore(Connector *connector, QObject *parent)
-    : QObject(parent)
-    , connector_(connector)
-    , headersEnsured_(false)
+qint64 DataStore::generateId() noexcept
+{
+    if (!connector_)
+    {
+        return -1;
+    }
+
+    return static_cast<qint64>(connector_->getSize());
+}
+
+DataStore::DataStore(Connector *connector, QObject *parent) : QObject(parent), connector_(connector)
 {
     if (!connector_)
     {
         qWarning().noquote() << "[DataStore] Null connector passed to constructor.";
         return;
     }
-
-    ensureHeaders();
 }
 
 QString DataStore::serializeData(qint64 id,
@@ -449,29 +460,6 @@ bool DataStore::deserializeData(const QString &line, Data &data) const
     return true;
 }
 
-void DataStore::ensureHeaders()
-{
-    if (headersEnsured_)
-    {
-        return;
-    }
-
-    if (!connector_)
-    {
-        qWarning().noquote() << "[DataStore] Cannot ensure headers: connector is null.";
-        return;
-    }
-
-    // Формат хранения здесь без отдельной строки заголовков;
-    // метод оставлен как точка расширения и для совместимости с интерфейсом.
-    headersEnsured_ = true;
-}
-
-qint64 DataStore::generateId()  noexcept
-{
-    return 0;
-}
-
 bool DataStore::writeData(const Data &record)
 {
     if (!connector_)
@@ -479,8 +467,6 @@ bool DataStore::writeData(const Data &record)
         qWarning().noquote() << "[DataStore] writeData failed: connector is null.";
         return false;
     }
-
-    ensureHeaders();
 
     const qint64 id = generateId();
     if (id < 0)
@@ -589,86 +575,3 @@ QVector<Data> DataStore::readAllData() const
 
     return result;
 }
-
-// int main()
-// {
-//     constexpr size_t RECORD_SIZE = 16;
-
-//     FileConnector connector("C:\\Users\\ilyam\\Desktop\\ScadaForDiesel\\src\\backend\\data_store\\test.File", RECORD_SIZE);
-
-//     std::cout << "Initial size: " << connector.getSize() << "\n\n";
-
-//     // === WRITE ===
-//     std::cout << "=== WRITE ===\n";
-
-//     int64_t id0 = connector.write("Hello");
-//     int64_t id1 = connector.write("World");
-//     int64_t id2 = connector.write("VeryVeryLongString123");
-
-//     std::cout << "Inserted ids: "
-//               << id0 << ", "
-//               << id1 << ", "
-//               << id2 << "\n";
-
-//     std::cout << "Size after write: "
-//               << connector.getSize() << "\n\n";
-
-//     // === READ ===
-//     std::cout << "=== READ ===\n";
-
-//     printRecord(connector, id0);
-//     printRecord(connector, id1);
-//     printRecord(connector, id2);
-
-//     std::cout << "\n";
-
-//     // === UPDATE ===
-//     std::cout << "=== UPDATE ===\n";
-
-//     bool updated = connector.update(id1, "Updated");
-
-//     std::cout << "Update result: "
-//               << std::boolalpha
-//               << updated << "\n";
-
-//     printRecord(connector, id1);
-
-//     std::cout << "\n";
-
-//     // === REMOVE ===
-//     std::cout << "=== REMOVE ===\n";
-
-//     bool removed = connector.remove(id0);
-
-//     std::cout << "Remove result: "
-//               << std::boolalpha
-//               << removed << "\n";
-
-//     std::cout << "Size after remove: "
-//               << connector.getSize() << "\n";
-
-//     std::cout << "\nRecords after remove:\n";
-
-//     for (size_t i = 0; i < connector.getSize(); ++i)
-//     {
-//         printRecord(connector, static_cast<int64_t>(i));
-//     }
-
-//     std::cout << "\n";
-
-//     // === INVALID ACCESS ===
-//     std::cout << "=== INVALID ACCESS ===\n";
-
-//     printRecord(connector, 999);
-
-//     bool invalidUpdate = connector.update(999, "Test");
-//     bool invalidRemove = connector.remove(999);
-
-//     std::cout << "Invalid update: "
-//               << invalidUpdate << "\n";
-
-//     std::cout << "Invalid remove: "
-//               << invalidRemove << "\n";
-
-//     return 0;
-// }

@@ -74,13 +74,10 @@ public slots:
 private:
     QString serializeData(qint64 id, const Data &record, int precision = 3) const;
     bool deserializeData(const QString &line, Data &data) const;
-
-    void ensureHeaders();
     qint64 generateId() noexcept;
 
 private:
     Connector *connector_;
-    bool headersEnsured_;
 };
 
 #endif // DATASTORE_H
