@@ -50,7 +50,7 @@ private slots:
     void onModbusConnectionRestored();
 
     // Команды фронта
-    void onReceivedFrontControl(const ModelControl& control);
+    void onReceivedFrontControl();
     void onReceivedModelConfig(const ModelConfig& config);
 
 private:

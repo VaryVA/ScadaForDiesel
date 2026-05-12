@@ -15,6 +15,7 @@ StateMachine::StateMachine(BackendWorker* backendWorker, QObject* parent)
 
     // ----- Подготавливаем CSV-коннекторы для хранилища -----
     // пути можно вынести в настройки, здесь для примера
+    size_t SIZE_FILE_STR = 10;
     m_Connector = new FileConnector("measurements.csv", SIZE_FILE_STR);
 
     // ----- Создаём DataStore -----
@@ -167,9 +168,10 @@ void StateMachine::onDecisionReady(const Decision& decision)
     m_communicator->SendFeedbackToFrontend(decision.state);
 }
 
-void StateMachine::onReceivedFrontControl(const ModelControl& control)
+void StateMachine::onReceivedFrontControl()
 {
-    if (control.type == ControlType::EmergencyStop) {
+    ModelControl control;
+    if (control.type == ControlType::SimulationRequest) {
         requestAbort("Front control emergency stop");
     }
     // другая логика

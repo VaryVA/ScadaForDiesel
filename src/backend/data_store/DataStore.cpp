@@ -467,6 +467,11 @@ void DataStore::ensureHeaders()
     headersEnsured_ = true;
 }
 
+qint64 DataStore::generateId()  noexcept
+{
+    return 0;
+}
+
 bool DataStore::writeData(const Data &record)
 {
     if (!connector_)
